@@ -1,5 +1,4 @@
 import type { APIRoute } from "astro";
-import type { Message } from "../../lib/db";
 import { bus } from "../../lib/events";
 
 // The minimal server-sent-events (SSE) pattern: a long-lived streaming
@@ -7,8 +6,14 @@ import { bus } from "../../lib/events";
 // SSE is one-directional (server → browser) and plain HTTP, which makes it
 // the simplest live channel that works everywhere — reach for WebSockets
 // only when the client needs to push over the same connection.
+//
+// The roster only ever broadcasts a bare "changed" ping (see
+// src/lib/events.ts): a tutor watching the page in one tab sees a reschedule
+// another tutor just made in another tab, the same live-multi-viewer promise
+// the starter's guestbook demonstrated, without diffing DOM state over the
+// wire for what's still a low-frequency, whole-page-worth of change.
 export const GET: APIRoute = () => {
-  let onMessage: (message: Message) => void;
+  let onChange: () => void;
   let heartbeat: ReturnType<typeof setInterval>;
 
   const stream = new ReadableStream<string>({
@@ -18,14 +23,12 @@ export const GET: APIRoute = () => {
       // connection as idle
       controller.enqueue(": connected\n\n");
       heartbeat = setInterval(() => controller.enqueue(": ping\n\n"), 30_000);
-      onMessage = (message) => {
-        controller.enqueue(`data: ${JSON.stringify(message)}\n\n`);
-      };
-      bus.on("message", onMessage);
+      onChange = () => controller.enqueue("data: changed\n\n");
+      bus.on("changed", onChange);
     },
     cancel() {
       clearInterval(heartbeat);
-      bus.off("message", onMessage);
+      bus.off("changed", onChange);
     },
   });
 
