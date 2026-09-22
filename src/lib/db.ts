@@ -1,10 +1,10 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
-import { desc } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { type Message, messages } from "./schema";
+import { type CritGroup, type Exception, critGroups, exceptions, weeks } from "./schema";
 
 // One SQLite file is the app's whole persistent state. In production
 // fly.toml points DATABASE_PATH at the machine's volume (/data), which is
@@ -24,12 +24,198 @@ export const db = drizzle(client);
 // commit the migration it writes to drizzle/.
 migrate(db, { migrationsFolder: "./drizzle" });
 
-export type { Message };
+const DEFAULT_ROOM = "Marie Reay Building (155), Room 4.03";
 
-export function listMessages(): Message[] {
-  return db.select().from(messages).orderBy(desc(messages.id)).limit(50).all();
+// The real crit groups and 2026-S2 teaching weeks, as published by the
+// course website's own api/crit-groups.json — the system this app models a
+// slice of. Seeded once, on first boot against an empty database; a
+// redeploy or a reload never re-runs this against real rows.
+const SEED_GROUPS: Omit<CritGroup, "id">[] = [
+  { agent: "shitao", name: "Shitao", tutorName: "Ushini Attanayake", day: "Mon", startTime: "14:00", endTime: "15:30", room: DEFAULT_ROOM },
+  { agent: "bada", name: "Bada", tutorName: "Ushini Attanayake", day: "Mon", startTime: "15:30", endTime: "17:00", room: DEFAULT_ROOM },
+  { agent: "baishi", name: "Baishi", tutorName: "Tom Griffiths", day: "Wed", startTime: "09:00", endTime: "10:30", room: DEFAULT_ROOM },
+  { agent: "dachi", name: "Dachi", tutorName: "Tom Griffiths", day: "Wed", startTime: "10:30", endTime: "12:00", room: DEFAULT_ROOM },
+  { agent: "yunlin", name: "Yunlin", tutorName: "Bill McAlister", day: "Wed", startTime: "14:00", endTime: "15:30", room: DEFAULT_ROOM },
+  { agent: "liuru", name: "Liuru", tutorName: "Bill McAlister", day: "Wed", startTime: "15:30", endTime: "17:00", room: DEFAULT_ROOM },
+];
+
+const SEED_WEEKS: Omit<import("./schema").Week, never>[] = [
+  { week: 1, monday: "2026-07-27" },
+  { week: 2, monday: "2026-08-03" },
+  { week: 3, monday: "2026-08-10" },
+  { week: 4, monday: "2026-08-17" },
+  { week: 5, monday: "2026-08-24" },
+  { week: 6, monday: "2026-08-31" },
+  { week: 7, monday: "2026-09-21" },
+  { week: 8, monday: "2026-09-28" },
+  { week: 9, monday: "2026-10-05" },
+  { week: 10, monday: "2026-10-12" },
+  { week: 11, monday: "2026-10-19" },
+  { week: 12, monday: "2026-10-26" },
+];
+
+// Week 9's real, already-published exceptions (both groups sharing the
+// 14:00 tutor's Monday slot, moved off the ACT Labour Day public holiday) —
+// seeded so the roster starts from the schedule as it actually stands, not
+// an empty one.
+const SEED_EXCEPTIONS: Array<Omit<Exception, "id" | "createdAt" | "critGroupId"> & { agent: string }> = [
+  {
+    agent: "shitao",
+    week: 9,
+    day: "Tue",
+    startTime: "14:00",
+    endTime: "15:30",
+    room: null,
+    reason: "Monday 5 October is the ACT Labour Day public holiday",
+  },
+  {
+    agent: "bada",
+    week: 9,
+    day: "Wed",
+    startTime: "15:30",
+    endTime: "17:00",
+    room: "Marie Reay Building (155), Room 3.05",
+    reason: "Monday 5 October is the ACT Labour Day public holiday",
+  },
+];
+
+function seed(): void {
+  if (db.select().from(critGroups).limit(1).all().length > 0) return;
+  for (const group of SEED_GROUPS) db.insert(critGroups).values(group).run();
+  for (const w of SEED_WEEKS) db.insert(weeks).values(w).run();
+  for (const { agent, ...exception } of SEED_EXCEPTIONS) {
+    const group = db.select().from(critGroups).where(eq(critGroups.agent, agent)).get();
+    if (group) db.insert(exceptions).values({ ...exception, critGroupId: group.id }).run();
+  }
 }
 
-export function addMessage(body: string): Message {
-  return db.insert(messages).values({ body }).returning().get();
+seed();
+
+const DAY_OFFSET: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4 };
+
+// The real calendar date a (week, day) pair falls on, derived from the
+// week's Monday rather than stored — the same relationship the source
+// JSON's own comment describes ("the cutoff moves with the session").
+export function sessionDate(monday: string, day: string): string {
+  const date = new Date(`${monday}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + (DAY_OFFSET[day] ?? 0));
+  return date.toISOString().slice(0, 10);
+}
+
+export type RosterGroup = CritGroup & {
+  sessions: Array<{
+    week: number;
+    date: string;
+    day: string;
+    startTime: string;
+    endTime: string;
+    room: string;
+    reason: string | null;
+    exceptionId: number | null;
+  }>;
+};
+
+export function listWeeks() {
+  return db.select().from(weeks).orderBy(asc(weeks.week)).all();
+}
+
+export function listRoster(): RosterGroup[] {
+  const groups = db.select().from(critGroups).orderBy(asc(critGroups.day), asc(critGroups.startTime)).all();
+  const allWeeks = listWeeks();
+  const allExceptions = db.select().from(exceptions).all();
+
+  return groups.map((group) => ({
+    ...group,
+    sessions: allWeeks.map((w) => {
+      const exception = allExceptions.find((e) => e.critGroupId === group.id && e.week === w.week);
+      if (exception) {
+        return {
+          week: w.week,
+          date: sessionDate(w.monday, exception.day),
+          day: exception.day,
+          startTime: exception.startTime,
+          endTime: exception.endTime,
+          room: exception.room ?? group.room,
+          reason: exception.reason,
+          exceptionId: exception.id,
+        };
+      }
+      return {
+        week: w.week,
+        date: sessionDate(w.monday, group.day),
+        day: group.day,
+        startTime: group.startTime,
+        endTime: group.endTime,
+        room: group.room,
+        reason: null,
+        exceptionId: null,
+      };
+    }),
+  }));
+}
+
+const DAY_NAMES = new Set(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+export class ValidationError extends Error {}
+
+export type AddExceptionInput = {
+  critGroupId: number;
+  week: number;
+  day: string;
+  startTime: string;
+  endTime: string;
+  room: string;
+  reason: string;
+};
+
+// The one write this app makes to a group's schedule: reschedule a single
+// week's session. Validated at this boundary — everything downstream (the
+// roster view, the derived date) trusts what's in the table.
+export function addException(input: AddExceptionInput): Exception {
+  const group = db.select().from(critGroups).where(eq(critGroups.id, input.critGroupId)).get();
+  if (!group) throw new ValidationError("unknown crit group");
+
+  const week = db.select().from(weeks).where(eq(weeks.week, input.week)).get();
+  if (!week) throw new ValidationError("not a teaching week this semester");
+
+  if (!DAY_NAMES.has(input.day)) throw new ValidationError("day must be Mon–Fri");
+  if (!TIME_RE.test(input.startTime) || !TIME_RE.test(input.endTime)) {
+    throw new ValidationError("start and end must be a 24-hour time, e.g. 14:00");
+  }
+  if (input.startTime >= input.endTime) throw new ValidationError("end must be after start");
+
+  const reason = input.reason.trim();
+  if (!reason) throw new ValidationError("a reason is required");
+
+  const existing = db
+    .select()
+    .from(exceptions)
+    .where(and(eq(exceptions.critGroupId, input.critGroupId), eq(exceptions.week, input.week)))
+    .get();
+  if (existing) {
+    db.delete(exceptions).where(eq(exceptions.id, existing.id)).run();
+  }
+
+  return db
+    .insert(exceptions)
+    .values({
+      critGroupId: input.critGroupId,
+      week: input.week,
+      day: input.day,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      room: input.room.trim() || null,
+      reason,
+    })
+    .returning()
+    .get();
+}
+
+export function cancelException(id: number): void {
+  db.delete(exceptions).where(eq(exceptions.id, id)).run();
+}
+
+export function getCritGroup(id: number): CritGroup | undefined {
+  return db.select().from(critGroups).where(eq(critGroups.id, id)).get();
 }
