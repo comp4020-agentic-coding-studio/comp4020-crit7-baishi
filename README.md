@@ -1,18 +1,66 @@
-# Your prototype
+# Crit roster
 
-<!-- TEMPLATE: this file is yours, and the deployed app publishes it in full at
-     /readme/ --- a visitor reads it before they touch the app, and so does the
-     marker. Replace everything in it, this comment included. -->
+The ANU system this models is the one this agent group sits inside every week:
+six crit groups, each with a tutor and a standing weekly slot, meeting through
+a semester that has public holidays and a mid-semester break in it. The course
+website publishes that roster as a hand-maintained
+[`crit-groups.json`](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/api/crit-groups.json),
+with a sparse `exceptions` array added by hand whenever a week's slot moves —
+this run's own group, Baishi, has exactly that: a week-9 Wednesday slot pushed
+to Tuesday because Monday 5 October is the ACT Labour Day public holiday. This
+app rebuilds that one mechanism as a real, persisted, multi-user database
+instead of a JSON file someone edits by hand: reschedule a group's session for
+one teaching week, and the change is a row in SQLite that every open tab
+learns about live.
 
-What this is, in a paragraph: the thing, and what it's for.
+The standing schedule (six groups, twelve teaching weeks, real tutor names and
+slot times) and the two real week-9 exceptions are seeded verbatim from that
+published JSON, so the app opens already showing the real state of the
+course, not placeholder data.
 
 ## What good looks like here
 
-Say what good means for this app: what you decided, what you read or looked at
-while deciding, and what you chose not to build. The rules that decision
-produced live in `CLAUDE.md` and the checks that protect it live in `spec/`;
-this is the argument they came from, so say which parts of good are enforced and
-which are judgement calls.
+The core flow is rescheduling: pick a group, a teaching week, a new day/time/
+room and a reason, submit, and the roster shows the new session in place of
+the standing slot for that one week — with a button to cancel the exception
+and fall back to the standing slot again. That flow has to survive a reload
+(it's a database row, not client state) and has to notify every other open
+tab without anyone refreshing by hand, because the real system this models is
+inherently multi-tutor: more than one person can have the roster open at
+once, and a change one of them makes is exactly the kind of thing the others
+need to see without asking.
 
-Images go in `public/` and are linked relatively --- `![alt](public/before.png)`
---- which renders on GitHub and at `/readme/` alike.
+Decisions this run made and why:
+
+- **Validation lives server-side, not just in the form.** `<input required>`
+  and `type="time"` catch the easy cases, but the actual rules — the day has
+  to be a weekday, the end time has to be after the start time, a reason is
+  mandatory — are enforced in `addException` (`src/lib/db.ts`) and re-checked
+  by `spec/crit-7.test.ts`, because a form's client-side constraints are a
+  convenience, not the contract.
+- **No client JavaScript for the write path.** The reschedule and cancel
+  actions are plain HTML forms POSTing to Astro API routes with a 303
+  redirect back to `/`; the only script on the page is a small `EventSource`
+  listener whose entire job is telling *other* tabs to reload when something
+  changes. This was a judgement call, not something `spec/` enforces: a
+  scheduling roster doesn't need optimistic UI or partial re-renders, and a
+  plain form works with JavaScript disabled.
+- **Live sync is a single in-process event bus**, valid because this app runs
+  on exactly one Fly.io machine (`fly.toml` pins `min-machines-running` /
+  standalone HA off). A real multi-machine deployment would need a shared
+  pub/sub layer instead — noted here because it's the kind of thing that's
+  easy to get away with in a demo and wrong to ship without noticing.
+- **Rescheduling twice in the same week replaces the existing exception**
+  rather than stacking two, matching the real spreadsheet-style workflow this
+  models: a week has at most one "what actually happened" entry.
+- **What's out of scope**: there's no login and no per-tutor ownership of a
+  reschedule — anyone with the URL can reschedule any group's session, which
+  matches the real system (the JSON file is edited by whoever notices a
+  holiday clash first) but wouldn't be right for a system with actual stakes.
+
+`spec/crit-7.test.ts` enforces the reschedule/validation/cancel contracts
+described above against the built server, plus the shipped invariants
+(`spec/invariants.test.ts`) check every route for a landmark nav, one `h1`,
+alt text and a clean axe-core pass. Prose judgements — whether the copy reads
+well, whether the seeded data is a fair sample of the real system — are
+mine, not the test suite's.
