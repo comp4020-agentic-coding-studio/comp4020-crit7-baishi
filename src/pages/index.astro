@@ -1,8 +1,11 @@
 ---
-import { listMessages } from "../lib/db";
+import { listRoster, listWeeks } from "../lib/db";
 import "../styles.css";
 
-const messages = listMessages();
+const roster = listRoster();
+const weeks = listWeeks();
+const error = Astro.url.searchParams.get("error");
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 ---
 
 <!doctype html>
@@ -10,44 +13,109 @@ const messages = listMessages();
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>COMP4020 prototype</title>
+    <title>Crit roster</title>
   </head>
   <body>
     <nav aria-label="site">
-      <a href="/">Guestbook</a>
+      <a href="/">Roster</a>
       <a href="/readme/">About</a>
     </nav>
     <main>
-      <h1>Guestbook</h1>
+      <h1>Crit roster</h1>
       <p>
-        A minimal full-stack starter: messages live in SQLite on the machine's
-        volume (state survives a reload and a redeploy), and new messages
-        appear in every open tab over a server-sent-events stream — open this
-        page twice and sign it in one. Replace all of this with your own
-        prototype.
+        Every crit group's standing weekly slot, and the exceptions that
+        replace it for one teaching week at a time — rescheduling a session
+        here writes a row to SQLite instead of hand-editing the course
+        website's <code>api/crit-groups.json</code>. Open this page in two
+        tabs: rescheduling in one updates the other over the live stream.
       </p>
-      <form method="post" action="/api/messages">
-        <label for="body">Leave a message</label>
-        <input id="body" name="body" required maxlength="500" />
-        <button>Sign</button>
+
+      {error && <p class="error" role="alert">{error}</p>}
+
+      {
+        roster.map((group) => {
+          const exceptionSessions = group.sessions.filter((s) => s.exceptionId !== null);
+          return (
+            <section aria-labelledby={`group-${group.agent}`}>
+              <h2 id={`group-${group.agent}`}>{group.name}</h2>
+              <p>
+                Standing slot: every {group.day} {group.startTime}–{group.endTime} ·{" "}
+                {group.tutorName} · {group.room}
+              </p>
+              {exceptionSessions.length === 0 ? (
+                <p>No exceptions this semester — meets at its standing slot every teaching week.</p>
+              ) : (
+                <ul>
+                  {exceptionSessions.map((session) => (
+                    <li>
+                      Week {session.week} ({session.date}): now {session.day}{" "}
+                      {session.startTime}–{session.endTime} in {session.room} —{" "}
+                      {session.reason}
+                      <form method="post" action={`/api/exceptions/${session.exceptionId}/cancel`}>
+                        <button>Cancel, back to standing slot</button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })
+      }
+
+      <form method="post" action="/api/exceptions">
+        <fieldset>
+          <legend>Reschedule a session</legend>
+
+          <label for="critGroupId">Crit group</label>
+          <select id="critGroupId" name="critGroupId" required>
+            {roster.map((group) => (
+              <option value={group.id}>
+                {group.name} ({group.day} {group.startTime}–{group.endTime})
+              </option>
+            ))}
+          </select>
+
+          <label for="week">Teaching week</label>
+          <select id="week" name="week" required>
+            {weeks.map((w) => (
+              <option value={w.week}>
+                Week {w.week} ({w.monday})
+              </option>
+            ))}
+          </select>
+
+          <label for="day">New day</label>
+          <select id="day" name="day" required>
+            {DAYS.map((day) => (
+              <option value={day}>{day}</option>
+            ))}
+          </select>
+
+          <label for="startTime">New start</label>
+          <input id="startTime" name="startTime" type="time" required />
+
+          <label for="endTime">New end</label>
+          <input id="endTime" name="endTime" type="time" required />
+
+          <label for="room">Room</label>
+          <input id="room" name="room" placeholder="defaults to the group's usual room" />
+
+          <label for="reason">Reason</label>
+          <input id="reason" name="reason" required />
+
+          <button>Reschedule</button>
+        </fieldset>
       </form>
-      <ul id="messages">
-        {messages.map((message) => <li>{message.body}</li>)}
-      </ul>
     </main>
     <script>
-      // The live half of the demo: subscribe to the SSE stream and prepend
-      // messages as they arrive. The form itself needs none of this — its
-      // POST + redirect re-renders the submitting tab from SQLite; this
-      // stream is how every other tab finds out.
-      const list = document.querySelector("#messages");
+      // The live half of the roster: reload on any change reported over the
+      // SSE stream, so a tutor watching this page sees a reschedule made in
+      // another tab without acting themselves. The form itself needs none of
+      // this — its POST + redirect re-renders the submitting tab from
+      // SQLite; this stream is how every other tab finds out.
       const source = new EventSource("/api/events");
-      source.addEventListener("message", (event) => {
-        const message = JSON.parse(event.data);
-        const item = document.createElement("li");
-        item.textContent = message.body;
-        list?.prepend(item);
-      });
+      source.addEventListener("message", () => location.reload());
     </script>
   </body>
 </html>
