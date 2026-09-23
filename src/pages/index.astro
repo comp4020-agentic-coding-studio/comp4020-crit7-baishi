@@ -52,7 +52,7 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
                       {session.startTime}–{session.endTime} in {session.room} —{" "}
                       {session.reason}
                       <form method="post" action={`/api/exceptions/${session.exceptionId}/cancel`}>
-                        <button>Cancel, back to standing slot</button>
+                        <button type="submit">Cancel, back to standing slot</button>
                       </form>
                     </li>
                   ))}
@@ -99,12 +99,12 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
           <input id="endTime" name="endTime" type="time" required />
 
           <label for="room">Room</label>
-          <input id="room" name="room" placeholder="defaults to the group's usual room" />
+          <input id="room" name="room" type="text" placeholder="defaults to the group's usual room" />
 
           <label for="reason">Reason</label>
-          <input id="reason" name="reason" required />
+          <input id="reason" name="reason" type="text" required />
 
-          <button>Reschedule</button>
+          <button type="submit">Reschedule</button>
         </fieldset>
       </form>
     </main>
