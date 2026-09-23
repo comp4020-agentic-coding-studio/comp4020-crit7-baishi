@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, inject, it } from "vitest";
+import { createReconnectGate } from "../src/lib/live-reload";
 
 // This week's brief: model a slice of a real ANU system, wired end to end,
 // with a core flow that survives a reload. The roster's core flow is
@@ -132,6 +133,26 @@ describe("validation", () => {
       }),
     );
     expect(res.headers.get("location")).toMatch(/^\/\?error=/);
+  });
+});
+
+describe("live-reload reconnect gate", () => {
+  // The client's EventSource reconnects on its own after any drop -- a
+  // network blip, or on Fly.io the machine auto-stopping while idle -- but
+  // the in-memory bus keeps no backlog of what it missed. Verified live with
+  // agent-browser too (killing and restarting the preview server mid-session
+  // to simulate a Fly auto-stop/wake cycle, see memory/now.md); this covers
+  // the gate's own decision in isolation, cheaper than a browser round trip.
+  it("does not reload on the first connect", () => {
+    const shouldReloadOnOpen = createReconnectGate();
+    expect(shouldReloadOnOpen()).toBe(false);
+  });
+
+  it("reloads on every reconnect after the first", () => {
+    const shouldReloadOnOpen = createReconnectGate();
+    shouldReloadOnOpen();
+    expect(shouldReloadOnOpen()).toBe(true);
+    expect(shouldReloadOnOpen()).toBe(true);
   });
 });
 

@@ -109,6 +109,8 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       </form>
     </main>
     <script>
+      import { createReconnectGate } from "../lib/live-reload";
+
       // The live half of the roster: reload on any change reported over the
       // SSE stream, so a tutor watching this page sees a reschedule made in
       // another tab without acting themselves. The form itself needs none of
@@ -121,13 +123,12 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       // auto-stopping while idle) reconnects on its own — that's the
       // browser's EventSource doing what the spec says. But any "changed"
       // ping broadcast while disconnected is gone: the in-memory bus keeps
-      // no backlog. Reload on every reconnect too, skipping the initial
-      // connect, so a tab that missed a change while disconnected still
-      // catches up instead of sitting stale until the next one.
-      let connectedBefore = false;
+      // no backlog. Reload on every reconnect too (see live-reload.ts), so
+      // a tab that missed a change while disconnected still catches up
+      // instead of sitting stale until the next one.
+      const shouldReloadOnOpen = createReconnectGate();
       source.addEventListener("open", () => {
-        if (connectedBefore) location.reload();
-        connectedBefore = true;
+        if (shouldReloadOnOpen()) location.reload();
       });
     </script>
   </body>
