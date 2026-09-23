@@ -159,7 +159,37 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   `window.location.href` first, and filter the foreign lines out rather than
   investigating them.
 
+- `agent-browser fill`/`click`+`type` do not reliably populate an
+  `<input type="time">` element in this sandboxed container — confirmed on
+  `comp4020-crit7-baishi` (2026-09-24): `fill '#startTime' '09:00'` reported
+  success, but `eval`-reading `document.getElementById('startTime').value`
+  immediately after returned `""`; clicking the field then typing a plain
+  string (`'0900AM'`) left it empty too. Time inputs apparently need a
+  different synthetic-input path than text inputs get from `fill`/`type`.
+  Workaround: set `.value` directly via `eval` and dispatch synthetic
+  `input`/`change` events with `bubbles: true`
+  (`el.value = '09:00'; el.dispatchEvent(new Event('input', {bubbles:
+  true})); el.dispatchEvent(new Event('change', {bubbles: true}))`) — this
+  populated the field correctly and a subsequent `requestSubmit()` carried
+  the right values through to the server. Don't spend time debugging `fill`
+  itself against a `type="time"` field; reach for this workaround directly.
+
 ## Working patterns that held up
+
+- **A genuine DOM form submission (`el.requestSubmit()` on the real
+  `<form>`, or a real `.click()` on its submit/cancel button) is a
+  distinct verification claim from a vitest spec's `fetch()` POST to the
+  same route, and from a tab-to-tab SSE check — none of those exercise the
+  browser's own form-serialisation and same-origin `Origin`-header
+  behaviour the way a real submission does.** Confirmed on
+  `comp4020-crit7-baishi` (2026-09-24): after working around the
+  `type="time"` fill limitation above, drove a real reschedule via
+  `requestSubmit()` on the actual roster form and a real cancel via a
+  native button `.click()`, both against a fresh local `pnpm preview` —
+  console clean, roster updated correctly in both cases. Cheap to run once
+  the app has a form-based write path and worth doing at least once per
+  such deliverable, since `fetch()`-based spec coverage (however thorough)
+  never actually exercises the `<form>` element itself.
 
 - `agent-browser tab new <url>` opens a genuinely separate tab in the same
   browser session, and `agent-browser tab <id>`/`tab list` switches between
@@ -1428,6 +1458,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   and the CSS-property-literacy pass remains untried (still low-priority —
   this app has no custom-styled interactive elements to lose their shape
   under `forced-colors`, only native form controls).
+  A fourth run, 2026-09-24, 143h-to-cutoff, ran the brief-clause-re-derivation
+  technique against this repo's own `CLAUDE.md` (not the course source this
+  time) and found a real coverage gap: "one exception per group per week" is
+  implemented correctly (delete-then-insert against the schema's unique
+  constraint) and documented in `README.md` as a deliberate "replace, not
+  stack" decision, but had never had a test of its own — fixed with a new
+  `spec/crit-7.test.ts` block (`d81472c`). `pnpm audit` clean; `pnpm
+  outdated` had one genuine in-range patch (`astro` 7.3.3 → 7.3.4), applied
+  via `pnpm update` (`0707cf7`). Also found and worked around a new
+  `agent-browser` tooling limitation (`type="time"` inputs don't respond to
+  `fill`/`type`, see the new dedicated `MEMORY.md` entry above) and used the
+  workaround to drive the first-ever genuine DOM form submission and button
+  click against this app's write path (also newly logged above). Along the
+  way, found the local `.data/*.db*` scratch database had gone stale from
+  prior manual testing (missing a seeded exception) and was masking correct
+  behaviour during a live check — deleted and regenerated fresh (gitignored
+  local dev state, unrelated to the deployed Fly volume). `PROCESS.md`
+  updated, `pnpm check` green (36/36 tests) throughout, all 3 commits pushed
+  (`9d08e28`), redeployed and reverified live (200, correct seed data,
+  console clean). Not the last run — no reflection yet, correctly. See its
+  `now.md` for what's left: the CSS-property-literacy pass remains untried
+  (still correctly judged low-priority), and the human-timed session still
+  needs the studio crit itself.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
