@@ -1,70 +1,72 @@
----
-updated: 2026-09-23
-deliverable: comp4020-crit7-baishi
----
+# now
 
-# Now
+## comp4020-crit7-baishi — second run, 2026-09-23, ~154h-to-cutoff
 
-## State (first run, 167h to cutoff)
+Deepened the first run's build rather than adding new features, working the
+exact list its own hand-off flagged: a11y/HTML-validation sweep, keyboard
+tab-order walk, 200%-zoom reflow check, `pnpm audit`/`outdated`, and the SSE
+reconnect behaviour under a simulated Fly.io auto-stop/wake cycle.
 
-First run on `comp4020-crit7-baishi` — no prior hand-off existed for this
-repo. Brief fetched from
-`https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/api/crits/07-anu-system.json`:
-model a slice of a real ANU system, wired end to end, with a core flow that
-survives a reload, deployed live on Fly.io (week 8+ repo).
+**What changed (5 commits, all pushed to `origin/main`, HEAD `7e7a575`):**
 
-Built **Crit roster**: this course's own six crit groups, their standing
-weekly slots, and a database-backed reschedule/cancel mechanism replacing the
-course website's hand-edited `api/crit-groups.json` exceptions array. Seed
-data (six groups, twelve teaching weeks, the two real week-9 Labour-Day
-reschedules) is read verbatim from that published JSON — a legitimate,
-non-guessed URL per the course's own three-layer doctrine
-(`/home/ben/projects/comp4020/CLAUDE.md`: website `/api/*.json` is public
-truth other layers sync).
+- `ec369f3` — `pnpm audit` found 19 vulnerabilities in transitive dev/build
+  deps; a plain in-range `pnpm update` (drizzle-orm/drizzle-kit/vitest, no
+  pin changed) cleared 18. One left: an `esbuild` dev-server advisory via
+  `drizzle-kit`'s deprecated `@esbuild-kit` loader — only matters if
+  esbuild's dev server is network-exposed, which this app never does.
+  Deliberately left rather than forcing a major `drizzle-kit` bump.
+- `4bb2333` — `html-validate` against the built pages found 2 `<button>`s
+  and 2 `<input>`s missing an explicit `type`; fixed with the type each
+  already behaved as.
+- `d8d8b2d` / `fd6e497` — the headline finding. Simulated a Fly.io
+  auto-stop/wake cycle live with `agent-browser` (killed and restarted the
+  preview server mid-session, watched a second tab's `EventSource`):
+  browser reconnection is real and works, but any "changed" ping broadcast
+  during the outage is lost forever since the in-memory bus
+  (`src/lib/events.ts`) keeps no backlog — a tab can go stale and never
+  know to refresh. Fixed by reloading on every reconnect after the first;
+  pulled the decision out of the inline `<script>` into
+  `src/lib/live-reload.ts` (`createReconnectGate`) so `spec/crit-7.test.ts`
+  could assert it directly, per this repo's own `CLAUDE.md` rule that every
+  new checkable behaviour gets spec coverage the same run it's added.
+- `7e7a575` — cited all of the above in `PROCESS.md`.
 
-Work done, in five commits (`56af91f` schema/db, `ad5e097` API routes,
-`ecd41fc` UI, `ceeebb9` spec, `9e4bdff` docs, `753eb6e` PROCESS.md — 6 total):
+**Also checked, confirmed correct, no code change:**
 
-- Schema: `crit_groups` × `weeks` × `exceptions` (unique on
-  `(crit_group_id, week)`), session date derived not stored.
-- Two API routes (`/api/exceptions` POST, `/api/exceptions/[id]/cancel`
-  POST), plain form + 303 redirect, no client JS on the write path.
-- Live cross-tab sync via the starter's existing SSE bus, broadcasting a bare
-  `"changed"` event.
-- `spec/crit-7.test.ts`: valid reschedule persists + falls back to the
-  group's room + broadcasts over SSE; empty reason / bad time range /
-  weekend day all rejected without writing a row; cancel reverts to standing
-  slot. 33/33 tests green, `pnpm check` clean.
-- `README.md`, `PROCESS.md` (citing real commits, 150–300 word crit
-  guidance), and this repo's own `CLAUDE.md` all written for real.
-- Interactive live verification with `agent-browser` **two real tabs**
-  (`tab new`): submitted a reschedule in tab 1, confirmed tab 2's
-  `EventSource` fired a genuine navigation (a `window.__marker` set before
-  the change was gone after) and showed the new session — not just the
-  vitest SSE-stream assertion. Console clean both tabs. Cancel flow also
-  driven live, not just at the HTTP layer.
-- Deployed: `flyctl deploy --remote-only --ha=false -a comp4020-crit7-baishi`
-  succeeded (first deploy for this repo, app existed but had no image yet).
-  Live URL `https://comp4020-crit7-baishi.fly.dev/` verified both by `curl`
-  (200 on `/` and `/readme/`) and `agent-browser` (console clean, full-page
-  screenshot confirms real seed data rendering correctly).
-- Pushed to `origin/main` (`753eb6e`).
-- `pnpm check:evidence`: only the expected reflection-missing failure (not
-  the last run yet); CLAUDE.md present, all citations resolve — confirmed by
-  reading `scripts/check-evidence.ts` directly rather than trusting the
-  single printed failure line, per the established shared-`failed`-flag
-  caution in `MEMORY.md`.
+- Keyboard tab-order walk at both marking viewports: nav → per-group cancel
+  forms → the reschedule form's fields in visual order, default
+  `outline: auto` throughout (no `outline: none` reset in `styles.css`),
+  console clean.
+- Live axe-core sweep: 0 violations.
+- 200%-zoom reflow check via `document.documentElement.style.zoom = '2'`:
+  initially looked like a real overflow (`documentElement.scrollWidth: 642`
+  vs `clientWidth: 390` on mobile), but no individual element actually
+  overflowed and a screenshot showed clean wrapping. Traced to a
+  `style.zoom`-specific measurement artifact: `documentElement.scrollWidth`
+  itself appears to get inflated by the zoom factor (exactly 2×
+  `body.scrollWidth`, which was correctly under the viewport width).
+  **Testing-technique note for future runs:** under `style.zoom`, measure
+  `body.scrollWidth`/a per-element sweep, not `documentElement.scrollWidth`
+  — cross-check with a screenshot before trusting the number.
 
-## Next action
+**Deployed:** `flyctl deploy --remote-only --ha=false -a comp4020-crit7-baishi`
+succeeded; live URL confirmed via `curl` (200, real seed data present) and
+`agent-browser` (console clean) against `https://comp4020-crit7-baishi.fly.dev/`.
 
-Not the last run — no reflection expected yet. A future run should treat
-this as a genuinely fresh repo for deepening: no accessibility sweep
-(axe-core/html-validate/Lighthouse), no keyboard tab-order walk, no
-200%-zoom reflow check, and no `pnpm audit`/`outdated` pass have been run
-yet, unlike the many-runs-deep crit-4/crit-5/ass-2 repos elsewhere in this
-file. The reschedule form's `<select>`-based UI (one shared form for all six
-groups rather than a form per group) hasn't been checked for real keyboard
-operability (tab order through six selects + two time inputs + text inputs),
-and the SSE reconnect behaviour (what happens to a tab if the Fly machine
-auto-stops mid-session, given `min_machines_running = 0`) is untested and
-worth a look given this is the first crit repo on this Fly.io setup.
+**Not yet tried (next run's candidates):**
+
+- A full Lighthouse run (`CHROME_PATH` + `pnpm dlx lighthouse`) — never done
+  on this repo, and has found something on every other deliverable's first
+  run in `MEMORY.md`.
+- A real human-timed use session (needs the studio crit itself, not a
+  self-administered probe).
+- Re-applying the brief-clause-re-derivation technique (re-read the course
+  source's own prose one clause at a time against the current code) — not
+  yet tried on this repo at all, and has found real bugs on other
+  deliverables (crit-4, crit-5) after the standard sensor battery went dry.
+- A `prefers-reduced-motion`/`forced-colors`/CSS-property-literacy pass —
+  this app has almost no custom styling (`styles.css` is minimal), so this
+  angle may turn up little, but hasn't been checked at all.
+
+Not the last run — no reflection expected yet. `git status` clean, all
+commits pushed.

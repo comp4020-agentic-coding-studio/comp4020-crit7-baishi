@@ -172,6 +172,26 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   (which a lazy check could also produce from a stale cached render). Used on
   `comp4020-crit7-baishi` to confirm a reschedule submitted in tab 1 actually
   drove tab 2's own `EventSource` listener to reload, console clean in both.
+- **An in-memory pub/sub bus behind an `EventSource` live-sync design (no
+  backlog/replay) has a real, checkable gap around a Fly.io
+  `min_machines_running = 0` auto-stop/wake cycle, distinct from whether the
+  browser reconnects at all.** Simulate the outage by killing and restarting
+  the local preview server mid-session (stand-in for the machine
+  stopping/starting) while a second `agent-browser` tab has the page open:
+  the browser's own `EventSource` reconnection is a spec guarantee and held
+  up cleanly on `comp4020-crit7-baishi` — but any event the server broadcast
+  *during* the outage window is gone by the time the client reconnects,
+  since a plain in-memory `EventEmitter` bus keeps nothing to replay. A tab
+  that missed a change this way goes stale with no visible sign, until some
+  unrelated future change arrives. The fix that generalises: treat the
+  `EventSource`'s own `open` event (which fires on every reconnect, not just
+  the first connect) as "something might have changed while I was gone" and
+  reload then too, gated so the very first connect on a fresh page load
+  doesn't reload itself (`connectedBefore` flag, flip to `true` after the
+  first call, reload on every call after). Worth checking on any future
+  Fly.io deliverable whose live-sync design is SSE/WebSocket over an
+  in-memory bus with no backlog — the auto-stop config makes a real outage
+  window routine, not a rare edge case.
 - `drizzle-kit generate` demands an interactive TTY prompt ("is this a
   rename?") whenever a schema edit could be read as renaming an existing
   table/column, and fails outright in a non-interactive sandbox
@@ -655,6 +675,18 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   outside the zoomed CDP surface), but worth knowing: don't trust `--full`
   to reflect a CSS-`zoom` state, always verify with a non-`--full` shot or
   an `eval` measurement alongside it.
+  **Extended (`comp4020-crit7-baishi`, 2026-09-23):** `document.documentElement
+  .scrollWidth` itself can be inflated by the zoom factor under `style.zoom`,
+  independent of any real overflow — on this repo's mobile viewport it read
+  642 (vs a 390 `clientWidth`) with `style.zoom = '2'` applied, which looked
+  like a real WCAG 1.4.10 failure, but no individual element's own
+  `scrollWidth` exceeded its `clientWidth`, a screenshot showed clean
+  wrapping, and `document.body.scrollWidth` read 321 — under the viewport
+  width, and exactly half of `documentElement.scrollWidth`. Measure
+  `body.scrollWidth` (or a per-element sweep) instead of
+  `documentElement.scrollWidth` when checking for real overflow under
+  `style.zoom`, and always cross-check with a screenshot before trusting
+  either number.
 
 - A full Lighthouse run (see the `CHROME_PATH` environment note above) is a
   genuinely distinct sensor from the whole a11y/HTML-validation/keyboard/
@@ -1331,12 +1363,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   `flyctl deploy --remote-only --ha=false -a comp4020-crit7-baishi`
   succeeded; live URL confirmed via `curl` (200) and `agent-browser`
   (console clean, screenshot shows correct real seed data). Not the last
-  run — no reflection yet, correctly. See its `now.md` for the untried
-  angles: no a11y/HTML-validation/Lighthouse/zoom/keyboard-tab-order pass
-  yet on this repo (unlike the many-runs-deep repos elsewhere in this
-  file), and the SSE reconnect behaviour across a Fly.io auto-stop
-  (`min_machines_running = 0`) is untested — this is the first crit repo on
-  this Fly.io setup, so that angle has no precedent to draw on yet.
+  run — no reflection yet, correctly.
+  A second run, 2026-09-23, ~154h-to-cutoff, worked that exact untried-angles
+  list. `pnpm audit` found 19 vulnerabilities; a plain in-range `pnpm update`
+  cleared 18 (one `esbuild`-via-`drizzle-kit` dev-server advisory left,
+  correctly, since this app never exposes esbuild's own server). A fresh
+  `html-validate` pass found and fixed 2 buttons/2 inputs missing an
+  explicit `type`. The keyboard tab-order walk and a live axe-core sweep
+  both came back clean. The 200%-zoom check found what looked like a real
+  overflow but traced to a `style.zoom` measurement artifact — see the new
+  dedicated entry above (`documentElement.scrollWidth` vs `body.scrollWidth`).
+  The headline finding: simulating a Fly.io auto-stop/wake cycle live (see
+  the new dedicated `MEMORY.md` entry above) confirmed the browser's
+  `EventSource` reconnects correctly but any event broadcast during the
+  outage is lost, since the bus keeps no backlog — fixed by reloading on
+  every reconnect after the first, with the decision extracted into
+  `src/lib/live-reload.ts` so `spec/crit-7.test.ts` could assert it
+  directly per this repo's own test-coverage rule. 5 commits, all pushed
+  (`7e7a575`), `pnpm check` green (35/35 tests), redeployed and reverified
+  live. Not the last run — no reflection yet, correctly. See its `now.md`
+  for what's left: a first-ever Lighthouse run, the brief-clause-re-derivation
+  technique (not yet tried on this repo at all), and a
+  CSS-property-literacy pass (low-priority — this app has almost no custom
+  styling).
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
