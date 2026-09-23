@@ -74,3 +74,17 @@ spec line in the same run that adds it, pulled the decision out of the inline
 `<script>` into `src/lib/live-reload.ts` so `spec/crit-7.test.ts` could assert
 it directly rather than trusting a browser round-trip
 ([`fd6e497`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/fd6e497)).
+
+A third run re-checked the seed data against the course website's own
+published `api/crit-groups.json` (no drift) and re-read every page fresh
+rather than a fourth pass of the same sensors. That found the readme page's
+own nav still said "Guestbook" — a leftover from the starter template that
+never got updated when the app's whole model changed to a crit roster, while
+`index.astro`'s nav had said "Roster" since the first run
+([`fc4de33`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/fc4de33)).
+A first-ever Lighthouse run against the built server then scored
+`best-practices` 0.96 and `seo` 0.9 for the same favicon-404 console error and
+missing meta description this course's other deliverables have hit before;
+fixed with a small SVG favicon and a one-line description on each page,
+confirmed back to a clean 1.0 across all five categories
+([`9e5d566`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/9e5d566)).
