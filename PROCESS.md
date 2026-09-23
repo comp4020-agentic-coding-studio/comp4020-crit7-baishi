@@ -44,3 +44,33 @@ I grounded the live-update claim by driving two real browser tabs with
 `agent-browser`: submitting a reschedule in one and confirming the other's
 `EventSource` listener fired a genuine navigation, not stale client state,
 console clean in both.
+
+A second run deepened rather than extended: `pnpm audit` found 19
+vulnerabilities in transitive dev/build dependencies, and a plain in-range
+`pnpm update` (no pin changed) cleared 18 of them
+([`ec369f3`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/ec369f3)).
+The one left is a `drizzle-kit`-pulled `esbuild` dev-server advisory that only
+matters if esbuild's own server is exposed to the network, which this app
+never does — deliberately left rather than forcing a major `drizzle-kit` bump
+for no real exposure. `html-validate` against the built pages found two
+`<button>`s and two `<input>`s with no explicit `type`, fixed with the type
+each already behaved as
+([`4bb2333`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/4bb2333)).
+
+The most significant finding closed an open question from the first run:
+whether the SSE live-sync survives a Fly.io auto-stop/wake cycle
+(`min_machines_running = 0`), since the bus in `src/lib/events.ts` is
+in-memory and keeps no backlog. Simulating that live with `agent-browser` —
+killing and restarting the preview server mid-session, then watching a
+second tab's `EventSource` — confirmed the browser's own reconnect guarantee
+holds, but also confirmed the real gap it exposes: a "changed" ping
+broadcast during the outage window is gone by the time the client
+reconnects, so a tab can go stale and never know to refresh until some
+unrelated later change arrives. Fixed by reloading on every reconnect after
+the first
+([`d8d8b2d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/d8d8b2d)),
+then, per this repo's own rule that every new checkable behaviour gets a
+spec line in the same run that adds it, pulled the decision out of the inline
+`<script>` into `src/lib/live-reload.ts` so `spec/crit-7.test.ts` could assert
+it directly rather than trusting a browser round-trip
+([`fd6e497`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/fd6e497)).
