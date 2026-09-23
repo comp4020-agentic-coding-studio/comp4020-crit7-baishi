@@ -81,6 +81,51 @@ describe("rescheduling a session", () => {
   }, 10_000);
 });
 
+describe("rescheduling the same week twice", () => {
+  // addException deletes any existing exception for the same (critGroupId,
+  // week) before inserting the new one -- the schema's own unique
+  // constraint on that pair would otherwise reject the second insert. This
+  // is the "one exception per group per week" rule CLAUDE.md names, and had
+  // no test of its own: a naive read of that constraint could just as
+  // easily mean "reject a second reschedule," which is not what the code
+  // does.
+  it("replaces the earlier exception rather than duplicating or rejecting it", async () => {
+    await post(
+      "/api/exceptions",
+      new URLSearchParams({
+        critGroupId: "6", // liuru
+        week: "11",
+        day: "Tue",
+        startTime: "09:00",
+        endTime: "10:00",
+        room: "",
+        reason: "first reschedule",
+      }),
+    );
+    const res = await post(
+      "/api/exceptions",
+      new URLSearchParams({
+        critGroupId: "6",
+        week: "11",
+        day: "Fri",
+        startTime: "13:00",
+        endTime: "14:00",
+        room: "",
+        reason: "second reschedule",
+      }),
+    );
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe("/");
+
+    const html = await (await fetch(baseUrl)).text();
+    expect(html).not.toContain("first reschedule");
+    expect(html).toContain("second reschedule");
+    expect(html).toContain("Fri 13:00–14:00");
+    // exactly one row for that group/week, not one for each reschedule
+    expect(html.match(/second reschedule/g)?.length).toBe(1);
+  });
+});
+
 describe("validation", () => {
   it("rejects a reason-free request without writing an exception", async () => {
     const res = await post(
