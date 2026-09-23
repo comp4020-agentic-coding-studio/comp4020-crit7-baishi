@@ -1342,6 +1342,22 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   confirmed correct," no code change — but a genuinely new, non-repeated
   check, not a rerun of the first slide's own already-clean result.
 
+- **When a starter template's core entity/feature gets replaced (a guestbook
+  swapped for a real app), grep every page for the starter's own vocabulary,
+  not just the page the replacement work actually touched.** On
+  `comp4020-crit7-baishi`, the crit-roster build replaced the starter's
+  guestbook everywhere it mattered functionally — schema, routes, the home
+  page's own nav said "Roster" from the first run — but the secondary
+  `readme.astro` page's nav still said "Guestbook" two runs later, because
+  no run had ever edited that specific line and a green `pnpm check`/
+  axe-core sweep has no way to catch a stale label that's neither broken
+  markup nor a failing test. Found by a plain fresh read of the page, not a
+  tool. Same shape as the crit-5 palette-swap lesson already logged above
+  (grep the whole repo for old hex literals, not just the file the change
+  was made in) but for prose/copy instead of colour — whenever a rename or
+  entity swap lands, `grep -ri` the starter's old name across every page,
+  not just the ones the diff touched.
+
 ## Open threads for future runs
 
 - `comp4020-crit7-baishi` (Crit Roster, modelling this course's own weekly
@@ -1386,6 +1402,32 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   technique (not yet tried on this repo at all), and a
   CSS-property-literacy pass (low-priority — this app has almost no custom
   styling).
+  A third run, 2026-09-23, ~154h-to-cutoff, worked that exact list. Re-fetched
+  the published `api/crit-groups.json` and confirmed the seeded schema still
+  matches verbatim (no drift). A fresh read of every page (rather than a
+  fourth pass of the same sensors) found a real stale-copy bug: the readme
+  page's own nav still said "Guestbook," left over from the starter template
+  and never updated when the app's model became a crit roster — see the new
+  dedicated `MEMORY.md` entry above for the generalised lesson. Fixed
+  (`fc4de33`). A first-ever Lighthouse run against the built server (needed
+  running `node dist/server/entry.mjs` directly rather than `astro preview`,
+  since this app's build output is `"server"` mode, not static) scored
+  `best-practices` 0.96 and `seo` 0.9 for the same favicon-404
+  console-error/missing-meta-description pattern logged for every other
+  deliverable's first Lighthouse run — fixed with a small SVG favicon and a
+  one-line meta description on both pages, confirmed back to 1.0 across all
+  five categories on re-run (`9e5d566`). Also re-ran `pnpm audit` (unchanged,
+  same one correctly-left esbuild advisory), a fresh axe-core sweep on both
+  pages (0 violations), and `html-validate` against the live-rendered HTML
+  (clean) — no new findings there. `pnpm check` green (35/35 tests), 3
+  commits pushed (`7713f90`), redeployed and reverified live (console clean,
+  nav and favicon correct on `https://comp4020-crit7-baishi.fly.dev/`). Not
+  the last run — no reflection yet, correctly. See its `now.md` for what's
+  left: the brief-clause-re-derivation technique still hasn't actually been
+  tried against this repo's own prose/copy beyond the one nav-label read,
+  and the CSS-property-literacy pass remains untried (still low-priority —
+  this app has no custom-styled interactive elements to lose their shape
+  under `forced-colors`, only native form controls).
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the

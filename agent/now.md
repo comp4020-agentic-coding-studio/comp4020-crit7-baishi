@@ -1,72 +1,68 @@
 # now
 
-## comp4020-crit7-baishi — second run, 2026-09-23, ~154h-to-cutoff
+## comp4020-crit7-baishi — third run, 2026-09-23, ~154h-to-cutoff
 
-Deepened the first run's build rather than adding new features, working the
-exact list its own hand-off flagged: a11y/HTML-validation sweep, keyboard
-tab-order walk, 200%-zoom reflow check, `pnpm audit`/`outdated`, and the SSE
-reconnect behaviour under a simulated Fly.io auto-stop/wake cycle.
+Worked the prior run's own flagged list: a first-ever Lighthouse run, and a
+fresh-eyes read of the pages rather than a fourth pass of the exhausted
+technical-sensor battery. Did not try the brief-clause-re-derivation
+technique in the deeper sense (re-reading the course source's own prose
+clause-by-clause against the code) — only a plain fresh page read, which is
+what actually found the bug below. That deeper technique is still worth a
+real attempt next time.
 
-**What changed (5 commits, all pushed to `origin/main`, HEAD `7e7a575`):**
+**What changed (3 commits, all pushed to `origin/main`, HEAD `7713f90`):**
 
-- `ec369f3` — `pnpm audit` found 19 vulnerabilities in transitive dev/build
-  deps; a plain in-range `pnpm update` (drizzle-orm/drizzle-kit/vitest, no
-  pin changed) cleared 18. One left: an `esbuild` dev-server advisory via
-  `drizzle-kit`'s deprecated `@esbuild-kit` loader — only matters if
-  esbuild's dev server is network-exposed, which this app never does.
-  Deliberately left rather than forcing a major `drizzle-kit` bump.
-- `4bb2333` — `html-validate` against the built pages found 2 `<button>`s
-  and 2 `<input>`s missing an explicit `type`; fixed with the type each
-  already behaved as.
-- `d8d8b2d` / `fd6e497` — the headline finding. Simulated a Fly.io
-  auto-stop/wake cycle live with `agent-browser` (killed and restarted the
-  preview server mid-session, watched a second tab's `EventSource`):
-  browser reconnection is real and works, but any "changed" ping broadcast
-  during the outage is lost forever since the in-memory bus
-  (`src/lib/events.ts`) keeps no backlog — a tab can go stale and never
-  know to refresh. Fixed by reloading on every reconnect after the first;
-  pulled the decision out of the inline `<script>` into
-  `src/lib/live-reload.ts` (`createReconnectGate`) so `spec/crit-7.test.ts`
-  could assert it directly, per this repo's own `CLAUDE.md` rule that every
-  new checkable behaviour gets spec coverage the same run it's added.
-- `7e7a575` — cited all of the above in `PROCESS.md`.
+- `fc4de33` — the readme page's nav still said "Guestbook," a leftover from
+  the starter template never updated when the app's model became a crit
+  roster (`index.astro`'s nav has said "Roster" since the first run). Found
+  by a plain fresh read, not a tool — no test or sensor asserts nav-label
+  consistency. See the new generalised `MEMORY.md` entry: grep every page
+  for a starter's old vocabulary whenever a rename/entity swap lands, not
+  just the pages the diff touched.
+- `9e5d566` — first-ever Lighthouse run against the built server (had to run
+  `node dist/server/entry.mjs` directly, not `astro preview` — this app's
+  build output is `"server"` mode). Scored `best-practices` 0.96 / `seo` 0.9
+  for the by-now-familiar favicon-404-console-error + missing-meta-
+  description pattern. Fixed with a small SVG favicon (`public/favicon.svg`,
+  linked via `rel="icon"`) and a one-line `<meta name="description">` on
+  both pages; re-run confirmed all five categories back to 1.0.
+- `7713f90` — cited both in `PROCESS.md`.
 
 **Also checked, confirmed correct, no code change:**
 
-- Keyboard tab-order walk at both marking viewports: nav → per-group cancel
-  forms → the reschedule form's fields in visual order, default
-  `outline: auto` throughout (no `outline: none` reset in `styles.css`),
-  console clean.
-- Live axe-core sweep: 0 violations.
-- 200%-zoom reflow check via `document.documentElement.style.zoom = '2'`:
-  initially looked like a real overflow (`documentElement.scrollWidth: 642`
-  vs `clientWidth: 390` on mobile), but no individual element actually
-  overflowed and a screenshot showed clean wrapping. Traced to a
-  `style.zoom`-specific measurement artifact: `documentElement.scrollWidth`
-  itself appears to get inflated by the zoom factor (exactly 2×
-  `body.scrollWidth`, which was correctly under the viewport width).
-  **Testing-technique note for future runs:** under `style.zoom`, measure
-  `body.scrollWidth`/a per-element sweep, not `documentElement.scrollWidth`
-  — cross-check with a screenshot before trusting the number.
+- Seed data re-verified against the course website's own published
+  `api/crit-groups.json`: still matches verbatim, no drift.
+- `pnpm audit`: unchanged, same one `esbuild`-via-`drizzle-kit` dev-server
+  advisory, correctly still left (never network-exposed in this app).
+- A fresh axe-core sweep on both pages: 0 violations.
+- `html-validate` against the live-rendered HTML (not `dist/client` — this
+  app has no static client HTML, it's server-rendered): clean.
+- `pnpm check`: green, 35/35 tests, throughout.
 
 **Deployed:** `flyctl deploy --remote-only --ha=false -a comp4020-crit7-baishi`
-succeeded; live URL confirmed via `curl` (200, real seed data present) and
-`agent-browser` (console clean) against `https://comp4020-crit7-baishi.fly.dev/`.
+succeeded; live URL reverified via `curl` (200, correct nav/favicon/meta
+description) and `agent-browser` (console clean) against
+`https://comp4020-crit7-baishi.fly.dev/`.
 
 **Not yet tried (next run's candidates):**
 
-- A full Lighthouse run (`CHROME_PATH` + `pnpm dlx lighthouse`) — never done
-  on this repo, and has found something on every other deliverable's first
-  run in `MEMORY.md`.
+- The brief-clause-re-derivation technique in its full form: re-read the
+  course source's own prose (`api/crits/07-anu-system.json`'s markdown body)
+  and this repo's own `CLAUDE.md` rules one clause at a time against the
+  *current* code — not just a fresh page read. Has found real bugs on other
+  deliverables (crit-4, crit-5) after the standard sensor battery went dry;
+  only a plain fresh-eyes read has been tried here so far, and it already
+  found one real bug, so the deeper technique is worth an honest attempt.
+- A `prefers-reduced-motion`/`forced-colors`/CSS-property-literacy pass —
+  still untried, still likely low-yield: this app's interactive elements
+  (buttons, inputs, links) are all native form controls with no
+  `appearance: none`/custom background-based shape to lose under
+  `forced-colors`, and there's no motion/animation anywhere to gate behind
+  `prefers-reduced-motion`. Worth one real look before writing it off
+  entirely, since "likely low-yield" was also the read on crit-4 before four
+  real gaps turned up there.
 - A real human-timed use session (needs the studio crit itself, not a
   self-administered probe).
-- Re-applying the brief-clause-re-derivation technique (re-read the course
-  source's own prose one clause at a time against the current code) — not
-  yet tried on this repo at all, and has found real bugs on other
-  deliverables (crit-4, crit-5) after the standard sensor battery went dry.
-- A `prefers-reduced-motion`/`forced-colors`/CSS-property-literacy pass —
-  this app has almost no custom styling (`styles.css` is minimal), so this
-  angle may turn up little, but hasn't been checked at all.
 
 Not the last run — no reflection expected yet. `git status` clean, all
-commits pushed.
+commits pushed and deployed.
