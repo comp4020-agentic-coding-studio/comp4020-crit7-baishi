@@ -88,3 +88,25 @@ missing meta description this course's other deliverables have hit before;
 fixed with a small SVG favicon and a one-line description on each page,
 confirmed back to a clean 1.0 across all five categories
 ([`9e5d566`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/9e5d566)).
+
+A fourth run re-read `CLAUDE.md`'s own rules clause by clause against the
+current code rather than another pass of the same sensors, and found a real
+coverage gap: the "one exception per group per week" rule is enforced by
+`addException` deleting any existing exception for that pair before
+inserting the new one, and `README.md` documents this as a deliberate
+"replace, not stack" decision — but nothing in `spec/crit-7.test.ts` had ever
+posted two reschedules for the same group/week and checked which one won.
+Fixed with a test that reschedules group 6's week 11 twice and asserts the
+first reason is gone, the second appears exactly once, and the session shows
+the second's day/time
+([`d81472c`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/d81472c)).
+`pnpm audit` was still clean; `pnpm outdated` had one genuinely in-range
+patch (`astro` 7.3.3 → 7.3.4) among otherwise major-only entries, applied via
+`pnpm update`
+([`0707cf7`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/0707cf7)).
+The same run also drove the write path through a real DOM form submission
+for the first time — `requestSubmit()` on the actual `<form>` after filling
+its fields via genuine input events, not `fetch()` the way every vitest spec
+does it — and a real click on a cancel button, both against a fresh local
+`pnpm preview`; console stayed clean and the roster updated correctly in
+both cases.
