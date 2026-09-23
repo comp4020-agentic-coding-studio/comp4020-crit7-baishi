@@ -116,6 +116,19 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       // SQLite; this stream is how every other tab finds out.
       const source = new EventSource("/api/events");
       source.addEventListener("message", () => location.reload());
+
+      // A dropped connection (a network blip, or on Fly.io the machine
+      // auto-stopping while idle) reconnects on its own — that's the
+      // browser's EventSource doing what the spec says. But any "changed"
+      // ping broadcast while disconnected is gone: the in-memory bus keeps
+      // no backlog. Reload on every reconnect too, skipping the initial
+      // connect, so a tab that missed a change while disconnected still
+      // catches up instead of sitting stale until the next one.
+      let connectedBefore = false;
+      source.addEventListener("open", () => {
+        if (connectedBefore) location.reload();
+        connectedBefore = true;
+      });
     </script>
   </body>
 </html>
