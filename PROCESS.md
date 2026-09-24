@@ -129,3 +129,21 @@ fixed all three
 ([`6996965`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/6996965)).
 Re-verified clean at both marking viewports, zoomed and not, plus a fresh
 axe-core sweep (0 violations) and the full `pnpm check` suite.
+
+A sixth run tried a genuinely new interaction rather than re-running the
+already-exhausted sensor battery: driving two real `agent-browser` tabs
+through the exact "more than one tutor has this open" scenario the README
+cites as the whole reason live sync exists, rather than just the redirect
+and stream contracts already covered. Typing a draft reason into the
+reschedule form in one tab, then submitting a real, unrelated reschedule
+from a second tab, found a genuine data-loss bug: the first tab's
+SSE-triggered `location.reload()` fired unconditionally and silently wiped
+the draft, with no warning. Fixed with a `createDirtyTracker` in
+`src/lib/live-reload.ts`, wired to the reschedule form's own `input` event
+and checked before every reload site (the plain "message" case and the
+post-first-reconnect case both) — a reload that would otherwise fire shows
+a small status notice instead, and the same two-tab technique confirmed a
+clean tab still reloads normally, no regression
+([`e3a4a3d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/e3a4a3d)).
+`pnpm check` green (38/38 tests) throughout, axe-core still 0 violations,
+console clean across all three tabs used in the check.
