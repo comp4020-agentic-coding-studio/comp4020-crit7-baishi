@@ -237,6 +237,35 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   site has any guard against the current tab's own unsaved input at all —
   if the listener's only job is "something changed, refresh," it almost
   certainly doesn't, and this exact two-tab technique is the way to find out.
+  **This trap recurred twice on the same repo's seventh run**, re-verifying
+  the fix below rather than reproducing the original bug — always check
+  `form.checkValidity()` on the "attacker" tab immediately before trusting
+  either a "nothing happened" or a "something happened" result from this
+  two-tab technique, not just once when the bug is first found; a tab's
+  `type="time"` fields go blank again after every redirect a prior
+  submission from that same tab triggered, so a second reuse of the same
+  tab silently needs re-filling every time, not just the first.
+- **A `markDirty`-only tracker is a one-way ratchet: once true, it never
+  reports clean again, even after the thing that made it dirty is undone.**
+  On `comp4020-crit7-baishi`, the fix just above (a dirty flag gating a
+  live-reload listener) initially had only `markDirty`/`isDirty`, set by the
+  form's `input` event — so a tutor who typed a draft into the reschedule
+  form and then cleared it back out (abandoning it, not submitting) left
+  that tab's live sync permanently broken for the rest of its life, over a
+  draft that no longer existed. Confirmed with the same two-tab
+  `window.__marker` technique: clear the draft back to empty, trigger a
+  genuine change from the other tab, watch the tab stay stuck on the stale
+  notice instead of reloading. Fix: add `markClean`, and instead of the
+  `input` listener calling `markDirty` unconditionally, have it re-compare
+  the form's current `FormData` serialization (`new
+  URLSearchParams(new FormData(form)).toString()`) against a snapshot taken
+  once at page load, calling `markClean`/`markDirty` depending on whether
+  they currently match — a live recomputed diff, not a sticky flag. General
+  lesson for any future crit with a "there's unsaved state, don't clobber
+  it" gate (a dirty flag, an "unsaved changes" banner, a beforeunload
+  guard): check whether undoing the thing that made it dirty is possible,
+  and whether the gate actually notices when it happens, not just whether
+  the gate fires in the first place.
 - **An in-memory pub/sub bus behind an `EventSource` live-sync design (no
   backlog/replay) has a real, checkable gap around a Fly.io
   `min_machines_running = 0` auto-stop/wake cycle, distinct from whether the
@@ -1577,6 +1606,17 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   correctly hidden by default). Not the last run — no reflection yet,
   correctly. No new self-administered angle is currently flagged; the
   human-timed studio-crit session remains the only standing open thread.
+  A seventh run, 2026-09-25, ~119h-to-cutoff, worked that run's own single
+  flagged candidate (does the dirty flag itself ever need clearing) and
+  found a real one-way-ratchet bug — see the new dedicated `markClean` entry
+  above for the mechanism and fix, and the extended trap entry for how the
+  same `type="time"`-reset trap bit twice re-verifying it. Fixed and pushed
+  (`38a7d0d`/`41e0e03`), `spec/crit-7.test.ts` coverage added (38 → 39
+  tests, green), `PROCESS.md` now at 7 cited moments, redeployed and
+  reverified live (200, console clean, fresh axe-core sweep 0 violations).
+  Not the last run — no reflection yet, correctly. No new self-administered
+  angle is currently flagged; the human-timed studio-crit session remains
+  the only standing open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
