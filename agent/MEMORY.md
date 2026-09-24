@@ -1372,6 +1372,40 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   confirmed correct," no code change — but a genuinely new, non-repeated
   check, not a rerun of the first slide's own already-clean result.
 
+- **A live 200%-zoom reflow check can uncover a reflow bug caused by several
+  stacked, individually-plausible CSS defaults rather than one obvious
+  mistake — trace each layer live rather than stopping at the first fix
+  that seems to help.** On `comp4020-crit7-baishi`'s reschedule form, a
+  cancel button ran off the right edge of a 390px viewport at 200% zoom
+  with no way to scroll it cleanly into view. Three separate causes were
+  stacked: (1) `input { min-width: 12rem }` can't shrink below that floor
+  for a narrow container — fixed with `min-width: min(12rem, 100%)`; (2)
+  **`<fieldset>` carries a UA-stylesheet default of `min-width:
+  min-content`** that silently overrides any container width regardless of
+  `overflow`/flex settings — a gotcha worth remembering on its own, since
+  nothing about a fieldset's *authored* CSS hints at it; fixed with an
+  explicit `fieldset { min-width: 0 }`; (3) an `inline-block`/`display:
+  inline` element (here, a `<form>` around the cancel button) with `max-
+  width: 100%` correctly caps its own computed width to the container, but
+  the browser can still position it starting mid-line, continuing from
+  preceding inline text's flow position, rather than forcing a line break —
+  so a "correctly sized" box still overflows past the container's right
+  edge. `getBoundingClientRect()` on the element itself distinguished this
+  from the first two causes (width correct, x-offset wrong); the robust fix
+  is `display: block` on the container so it always starts its own line,
+  not a width tweak. Diagnosed by toggling `element.style.display = 'none'`
+  via `eval` and re-measuring `body.scrollWidth` after each individual fix,
+  isolating which of the three was still contributing rather than assuming
+  one fix cleared all of it. General lesson, extending the existing
+  CSS-property-literacy lens (tap-highlight, touch-action, forced-colors,
+  touch-callout) to layout rather than just touch/contrast: a UA
+  stylesheet's element-specific intrinsic-sizing defaults (fieldset's
+  `min-content`, similarly `<button>`/`<select>`/`<img>` all have their own)
+  are easy to forget precisely because the authored CSS never mentions
+  them — worth a deliberate check on any form-heavy layout being tested at
+  narrow widths or high zoom, not just the properties this agent has
+  already been burned by once.
+
 - **When a starter template's core entity/feature gets replaced (a guestbook
   swapped for a real app), grep every page for the starter's own vocabulary,
   not just the page the replacement work actually touched.** On
@@ -1481,6 +1515,18 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   `now.md` for what's left: the CSS-property-literacy pass remains untried
   (still correctly judged low-priority), and the human-timed session still
   needs the studio crit itself.
+  A fifth run, 2026-09-24, ~136h-to-cutoff, worked that exact list: a live
+  keyboard tab-order walk came back clean, and a real 200%-zoom reflow
+  check at the mobile marking viewport found a genuine, previously-invisible
+  reflow bug in the reschedule form — see the new dedicated `fieldset`/
+  `inline`-form entry above for the three stacked CSS causes and the fix.
+  Fixed and pushed (`6996965`/`5cc110b`), re-verified clean at both marking
+  viewports (zoomed and not), a fresh axe-core sweep (0 violations), and the
+  full `pnpm check` suite (36/36). Redeployed and reverified live (200,
+  console clean, correct content). Not the last run — no reflection yet,
+  correctly. Every self-administered technical/content angle this agent has
+  a technique for has now been run at least once against this repo; the
+  human-timed studio-crit session is the only standing open thread left.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
