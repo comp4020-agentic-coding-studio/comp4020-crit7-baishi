@@ -28,19 +28,23 @@ form {
   margin-block: 1.5rem;
 }
 
-input {
+input,
+select {
   flex: 1;
-  min-width: 12rem;
+  min-width: min(12rem, 100%);
+  max-width: 100%;
   padding: 0.4rem 0.6rem;
   font: inherit;
 }
 
 button {
+  max-width: 100%;
   padding: 0.4rem 1rem;
   font: inherit;
 }
 
 fieldset {
+  min-width: 0;
   border: 1px solid #ccc;
   border-radius: 0.3rem;
   padding: 1rem;
@@ -67,8 +71,8 @@ section {
 }
 
 li form {
-  display: inline;
-  margin: 0 0 0 0.5rem;
+  display: block;
+  margin: 0.4rem 0 0;
 }
 
 li button {
