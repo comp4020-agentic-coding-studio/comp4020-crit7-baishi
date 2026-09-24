@@ -19,11 +19,21 @@ export function createReconnectGate(): () => boolean {
 // change also silently wipes whatever they'd already typed. `markDirty` is
 // meant to be wired to the reschedule form's own `input` event; `isDirty`
 // gates every reload site below on it.
-export function createDirtyTracker(): { markDirty: () => void; isDirty: () => boolean } {
+//
+// `markClean` exists because dirty isn't a one-way trip: a tutor who types a
+// draft and then clears it back out (or undoes it) has nothing left to lose
+// either, and without a way back to clean, that tab's live sync would stay
+// broken for the rest of its life over a draft that no longer exists.
+// index.astro calls markClean whenever the form's current values match its
+// snapshot at page load.
+export function createDirtyTracker(): { markDirty: () => void; markClean: () => void; isDirty: () => boolean } {
   let dirty = false;
   return {
     markDirty: () => {
       dirty = true;
+    },
+    markClean: () => {
+      dirty = false;
     },
     isDirty: () => dirty,
   };

@@ -131,9 +131,25 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       // reload that shows someone else's change would silently wipe their
       // draft too. Track that with the reschedule form's own `input` event
       // and skip the reload — showing a notice instead — whenever it fires.
+      //
+      // Dirty isn't one-way, though: typing a draft and then clearing it
+      // back out leaves nothing to lose either, so every input event
+      // re-compares the form's current values against its snapshot at page
+      // load and marks clean again when they match — otherwise a tutor who
+      // touched the form and backed out would have this tab's live sync
+      // stay broken for the rest of its life over a draft that no longer
+      // exists.
       const dirty = createDirtyTracker();
       const rescheduleForm = document.querySelector<HTMLFormElement>('form[action="/api/exceptions"]');
-      rescheduleForm?.addEventListener("input", dirty.markDirty);
+      const serialize = (form: HTMLFormElement) => new URLSearchParams(new FormData(form) as unknown as string[][]).toString();
+      const pristineSnapshot = rescheduleForm ? serialize(rescheduleForm) : null;
+      rescheduleForm?.addEventListener("input", () => {
+        if (serialize(rescheduleForm) === pristineSnapshot) {
+          dirty.markClean();
+        } else {
+          dirty.markDirty();
+        }
+      });
 
       const staleNotice = document.getElementById("stale-notice");
       const reloadUnlessDirty = () => {

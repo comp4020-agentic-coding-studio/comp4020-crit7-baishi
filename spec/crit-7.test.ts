@@ -223,6 +223,19 @@ describe("dirty tracker", () => {
     expect(dirty.isDirty()).toBe(true);
     expect(dirty.isDirty()).toBe(true);
   });
+
+  // Found live the same way as the reload-vs-draft bug above: a tutor who
+  // types into the reschedule form and then clears it back out (or the
+  // browser autofills a default value they then remove) has nothing left
+  // to lose, but a one-way dirty flag would leave this tab's live sync
+  // broken for the rest of its life over a draft that no longer exists.
+  it("goes clean again once marked clean", () => {
+    const dirty = createDirtyTracker();
+    dirty.markDirty();
+    expect(dirty.isDirty()).toBe(true);
+    dirty.markClean();
+    expect(dirty.isDirty()).toBe(false);
+  });
 });
 
 describe("cancelling a reschedule", () => {
