@@ -147,3 +147,25 @@ clean tab still reloads normally, no regression
 ([`e3a4a3d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/e3a4a3d)).
 `pnpm check` green (38/38 tests) throughout, axe-core still 0 violations,
 console clean across all three tabs used in the check.
+
+A seventh run followed up on that fix rather than starting a new sensor
+pass: the dirty flag was set on the reschedule form's first `input` event
+and never cleared, so a tutor who typed a draft and then cleared it back
+out — abandoning the reschedule rather than submitting it — left that tab's
+live sync permanently broken for the rest of its life, with nothing left
+to actually lose. Confirmed live with two tabs and a `window` marker to
+prove no reload had silently happened: clearing a draft back to empty,
+then triggering a genuine reschedule from the other tab, left the first
+tab showing the stale notice forever instead of reloading. Two attempts at
+reproducing this hit the same "the other tab's own submission silently
+failed HTML5 validation because its `<input type="time">` fields reset to
+blank after the prior redirect" trap logged in this run's own memory —
+worth naming here too, since it produced a false "nothing happened" result
+twice before checking `form.checkValidity()` caught it. Fixed by giving
+`createDirtyTracker` a `markClean` alongside `markDirty`, and having every
+`input` event re-compare the form's current values against its snapshot at
+page load rather than latching dirty forever
+([`38a7d0d`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/38a7d0d)).
+Re-verified both directions live — clearing a draft correctly un-sticks the
+reload, and a genuinely unfinished draft still blocks it and survives — plus
+a fresh axe-core sweep (0 violations) and `pnpm check` green (39/39 tests).
