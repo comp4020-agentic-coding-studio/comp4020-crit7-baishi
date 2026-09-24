@@ -64,6 +64,11 @@ legend {
   font-weight: 600;
 }
 
+.notice {
+  color: #0b5fff;
+  font-weight: 600;
+}
+
 section {
   margin-block: 1.5rem;
   padding-block-start: 1rem;

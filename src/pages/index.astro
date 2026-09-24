@@ -36,6 +36,10 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       </p>
 
       {error && <p class="error" role="alert">{error}</p>}
+      <p id="stale-notice" class="notice" role="status" hidden>
+        The roster changed in another tab. Your draft below is untouched —
+        reload when you're ready to see the update.
+      </p>
 
       {
         roster.map((group) => {
@@ -114,15 +118,34 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       </form>
     </main>
     <script>
-      import { createReconnectGate } from "../lib/live-reload";
+      import { createDirtyTracker, createReconnectGate } from "../lib/live-reload";
 
       // The live half of the roster: reload on any change reported over the
       // SSE stream, so a tutor watching this page sees a reschedule made in
       // another tab without acting themselves. The form itself needs none of
       // this — its POST + redirect re-renders the submitting tab from
       // SQLite; this stream is how every other tab finds out.
+      //
+      // But a bare reload is only safe when there's nothing to lose: if this
+      // tutor is mid-way through filling in their own reschedule, the same
+      // reload that shows someone else's change would silently wipe their
+      // draft too. Track that with the reschedule form's own `input` event
+      // and skip the reload — showing a notice instead — whenever it fires.
+      const dirty = createDirtyTracker();
+      const rescheduleForm = document.querySelector<HTMLFormElement>('form[action="/api/exceptions"]');
+      rescheduleForm?.addEventListener("input", dirty.markDirty);
+
+      const staleNotice = document.getElementById("stale-notice");
+      const reloadUnlessDirty = () => {
+        if (dirty.isDirty()) {
+          staleNotice?.removeAttribute("hidden");
+        } else {
+          location.reload();
+        }
+      };
+
       const source = new EventSource("/api/events");
-      source.addEventListener("message", () => location.reload());
+      source.addEventListener("message", reloadUnlessDirty);
 
       // A dropped connection (a network blip, or on Fly.io the machine
       // auto-stopping while idle) reconnects on its own — that's the
@@ -130,10 +153,11 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       // ping broadcast while disconnected is gone: the in-memory bus keeps
       // no backlog. Reload on every reconnect too (see live-reload.ts), so
       // a tab that missed a change while disconnected still catches up
-      // instead of sitting stale until the next one.
+      // instead of sitting stale until the next one — subject to the same
+      // dirty check, for the same reason.
       const shouldReloadOnOpen = createReconnectGate();
       source.addEventListener("open", () => {
-        if (shouldReloadOnOpen()) location.reload();
+        if (shouldReloadOnOpen()) reloadUnlessDirty();
       });
     </script>
   </body>

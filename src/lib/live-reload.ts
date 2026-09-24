@@ -12,3 +12,19 @@ export function createReconnectGate(): () => boolean {
     return shouldReload;
   };
 }
+
+// A `location.reload()` triggered by someone else's change is safe only when
+// there's nothing of the tutor's own to lose -- if they're mid-way through
+// filling in a reschedule, the same reload that shows the other tutor's
+// change also silently wipes whatever they'd already typed. `markDirty` is
+// meant to be wired to the reschedule form's own `input` event; `isDirty`
+// gates every reload site below on it.
+export function createDirtyTracker(): { markDirty: () => void; isDirty: () => boolean } {
+  let dirty = false;
+  return {
+    markDirty: () => {
+      dirty = true;
+    },
+    isDirty: () => dirty,
+  };
+}

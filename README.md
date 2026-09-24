@@ -45,6 +45,15 @@ Decisions this run made and why:
   changes. This was a judgement call, not something `spec/` enforces: a
   scheduling roster doesn't need optimistic UI or partial re-renders, and a
   plain form works with JavaScript disabled.
+- **A live reload skips itself while the reschedule form has unsaved input.**
+  Found by driving two real tabs with `agent-browser`: typing a draft reason
+  in one tab, then submitting an unrelated change from the other, showed the
+  first tab's SSE-triggered `location.reload()` silently wiping the draft —
+  a real risk for the exact "more than one tutor has this open" scenario the
+  live sync exists for. `src/lib/live-reload.ts`'s `createDirtyTracker`
+  tracks the reschedule form's own `input` event; a reload that would
+  otherwise fire (on a message, or on a post-first reconnect) shows a small
+  status notice instead until the draft is submitted or abandoned.
 - **Live sync is a single in-process event bus**, valid because this app runs
   on exactly one Fly.io machine (`fly.toml` pins `min-machines-running` /
   standalone HA off). A real multi-machine deployment would need a shared

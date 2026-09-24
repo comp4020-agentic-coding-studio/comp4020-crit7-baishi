@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, inject, it } from "vitest";
-import { createReconnectGate } from "../src/lib/live-reload";
+import { createDirtyTracker, createReconnectGate } from "../src/lib/live-reload";
 
 // This week's brief: model a slice of a real ANU system, wired end to end,
 // with a core flow that survives a reload. The roster's core flow is
@@ -198,6 +198,30 @@ describe("live-reload reconnect gate", () => {
     shouldReloadOnOpen();
     expect(shouldReloadOnOpen()).toBe(true);
     expect(shouldReloadOnOpen()).toBe(true);
+  });
+});
+
+describe("dirty tracker", () => {
+  // A `location.reload()` from the SSE stream would silently wipe an
+  // in-progress reschedule draft -- found live with agent-browser: filling
+  // the reschedule form's reason field, triggering a genuine change from a
+  // second tab, and watching the first tab's draft vanish on reload with no
+  // warning. This is the gate that stops that: index.astro wires markDirty
+  // to the reschedule form's own `input` event and checks isDirty before
+  // reloading on either a "message" event or a post-first reconnect.
+  it("starts clean and reports dirty once marked", () => {
+    const dirty = createDirtyTracker();
+    expect(dirty.isDirty()).toBe(false);
+    dirty.markDirty();
+    expect(dirty.isDirty()).toBe(true);
+  });
+
+  it("stays dirty across repeated checks and marks", () => {
+    const dirty = createDirtyTracker();
+    dirty.markDirty();
+    dirty.markDirty();
+    expect(dirty.isDirty()).toBe(true);
+    expect(dirty.isDirty()).toBe(true);
   });
 });
 
