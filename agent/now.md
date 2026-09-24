@@ -1,51 +1,62 @@
 # now
 
-## comp4020-crit7-baishi — fifth run, 2026-09-24, ~136h-to-cutoff
+## comp4020-crit7-baishi — sixth run, 2026-09-24, ~130h-to-cutoff
 
-Worked the prior run's flagged candidate: the 200%-zoom reflow check and a
-live keyboard tab-order walk, neither of which had actually been run against
-this repo before despite being cheap and standard for this agent's other
-deliverables.
+The prior run's own `now.md` had flagged the human-timed studio session as
+the *only* standing open thread — every self-administered technique this
+agent has had been run at least once. Rather than force a low-yield
+CSS-property-literacy pass on a stylesheet with no custom controls, tried a
+genuinely new interaction instead: drove two real `agent-browser` tabs
+through the exact "more than one tutor has this open" scenario `README.md`
+names as the whole reason live sync exists, rather than just the redirect
+and SSE-stream contracts already covered by `spec/crit-7.test.ts`.
 
-**What changed (2 commits, all pushed to `origin/main`, HEAD `5cc110b`):**
+**What changed (2 commits, pushed to `origin/main`, HEAD `e403687`):**
 
-- `6996965` — the zoom check found a genuine, previously-invisible WCAG
-  1.4.10 reflow bug: at 200% zoom on the 390px marking viewport, the
-  reschedule form's cancel button (for any group with an active exception)
-  ran off the right edge with no clean way to scroll it into view. Three
-  independent CSS causes were stacked: `input`'s `min-width: 12rem` floor,
-  `fieldset`'s UA-stylesheet default `min-width: min-content` (overrides
-  container width regardless of `overflow`), and the cancel button's `<form>`
-  being `display: inline` so it squeezed onto the same line as preceding
-  text instead of wrapping. Fixed all three in `src/styles.css`.
-- `5cc110b` — cited the finding and fix in `PROCESS.md`.
+- `e3a4a3d` — found and fixed a real data-loss bug: typing a draft reason
+  into the reschedule form in tab 1, then submitting an unrelated reschedule
+  from tab 2, showed tab 1's SSE-triggered `location.reload()` fire
+  unconditionally and silently wipe the draft, with no warning. Fixed with
+  `createDirtyTracker` in `src/lib/live-reload.ts`, wired to the reschedule
+  form's own `input` event (`src/pages/index.astro`) and checked before
+  every reload site (the plain `"message"` case and the
+  post-first-reconnect case both) — a reload that would otherwise fire now
+  shows a small `#stale-notice` status message instead. Added
+  `spec/crit-7.test.ts` coverage for the tracker itself (36 → 38 tests) and
+  a `.notice` style in `src/styles.css`.
+- `e403687` — cited the finding and fix in `PROCESS.md` and `README.md`'s
+  "Decisions this run made and why" list.
 
-**Also confirmed, no code change:**
+**Verification, this run:**
 
-- Live keyboard tab-order walk: nav links → each seeded exception's cancel
-  button → the reschedule form's fields, correct visual/logical order,
-  browser-default focus ring visible throughout (no `outline: none`
-  anywhere in the stylesheet). Clean.
-- Fresh axe-core sweep: 0 violations. `pnpm check`: green, 36/36 tests.
-- Deployed and reverified live: `https://comp4020-crit7-baishi.fly.dev/`
-  returns 200, console clean, 3 forms present, correct roster content.
+- Confirmed the bug was real (not a false negative) via distinguishing JS
+  markers across three tabs: a dirty tab shows the notice and keeps its
+  draft; a clean tab still reloads normally on the same change (no
+  regression). Hit and worked around a known `type="time"` fill limitation
+  along the way (see `MEMORY.md`) that had produced an initial false
+  negative.
+- `pnpm check` green (38/38) throughout; fresh axe-core sweep 0 violations;
+  console clean across all three tabs.
+- Deployed (`flyctl deploy --remote-only --ha=false -a
+  comp4020-crit7-baishi`) and reverified live:
+  `https://comp4020-crit7-baishi.fly.dev/` returns 200, console clean, the
+  reschedule form and `#stale-notice` (correctly `hidden` by default) are
+  both present in the live DOM.
 
-**Not yet tried (next run's candidates):**
+**Next run's candidates:**
 
-- A `prefers-reduced-motion`/`forced-colors`/CSS-property-literacy pass —
-  still untried across five runs now, still genuinely low-yield (this app
-  has no custom-styled controls or animation to gate — confirmed again
-  this run reading the full, now-slightly-larger stylesheet). Don't force
-  it; only worth a look if every other angle is exhausted.
-- A real human-timed use session (needs the studio crit itself, not a
-  self-administered probe) — the one standing open thread across every
-  run so far, and now the *only* standing open thread: every
-  self-administered technical/content angle this agent has a technique
-  for (schema/seed-drift check, dependency audit, brief-clause and
-  CLAUDE.md-clause re-derivation, Lighthouse, axe-core, html-validate,
-  keyboard tab order, 200%-zoom reflow, live SSE/tab-sync, DOM form
-  submission, Fly.io auto-stop/wake simulation) has now been run at least
-  once against this repo.
+- No new self-administered technical/content angle is currently flagged —
+  this is the expected steady state for a repo this thoroughly worked (same
+  pattern as crit-4/crit-5 late runs), not a sign something's being missed.
+  If a future run wants to try anyway: re-read `src/lib/live-reload.ts`'s
+  own comments clause-by-clause (the technique that found real bugs
+  repeatedly on Drift/Two-Tone) — e.g. does the dirty flag itself ever need
+  clearing (right now it's set-once-per-page-load with no way back to
+  clean; a tutor who abandons their draft and reloads manually gets a fresh
+  tracker for free, so this may already be fine, but hasn't been explicitly
+  checked).
+- The human-timed studio-crit session remains the only *structural* open
+  thread — needs the studio itself, not a future run of this agent.
 
 Not the last run — no reflection expected yet. `git status` clean, all
 commits pushed and deployed.

@@ -202,6 +202,41 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   (which a lazy check could also produce from a stale cached render). Used on
   `comp4020-crit7-baishi` to confirm a reschedule submitted in tab 1 actually
   drove tab 2's own `EventSource` listener to reload, console clean in both.
+- **An unconditional `location.reload()` triggered by a live-sync listener
+  (SSE/WebSocket "something changed elsewhere, refresh") can silently
+  discard whatever the current tab's own user was mid-way through typing —
+  a real data-loss bug distinct from the reconnect/backlog gap logged
+  below, and one no vitest stream-contract test can ever catch since it's
+  about *client-side unsaved state*, not the server's broadcast.** Found on
+  `comp4020-crit7-baishi`'s sixth run by driving the exact "more than one
+  tutor has this open" scenario the app's own README names as the reason
+  live sync exists: typing a draft into a form in tab 1, then submitting an
+  unrelated real change from tab 2, and watching tab 1's SSE listener
+  reload and wipe the draft with no warning. Fix pattern: a small
+  `markDirty`/`isDirty` tracker wired to the form's own `input` event,
+  checked immediately before every reload call site; when dirty, show a
+  status notice instead of reloading, and let the user's own submit or a
+  manual reload pick up the change later. Verification technique: use
+  *distinguishing* JS-state markers across three tabs (dirty-tab-keeps-draft,
+  clean-tab-still-reloads-normally, i.e. no regression) rather than eyeballing
+  page content, since a stale cached render and a genuine non-reload can look
+  identical from a screenshot alone — the same "prove navigation did or
+  didn't happen" discipline as the `tab new` marker technique above, applied
+  to the negative case (proving a reload was correctly *skipped*) instead of
+  the positive one. **Trap hit getting there:** an early attempt to
+  reproduce the bug appeared to show the draft surviving, but the "attacker"
+  tab's own form submission was silently failing validation the whole
+  time — its `type="time"` fields (`startTime`/`endTime`) were empty because
+  of the `fill`/`type` limitation already logged below, so no real change was
+  ever broadcast and no reload should have happened either way. That's a
+  false negative on the test, not evidence the bug doesn't exist — verify
+  the "attacker" tab's own submission actually succeeded (check the redirect
+  landed, or `new FormData(form)` before submitting) before trusting a
+  reproduction attempt that shows nothing happened. General lesson for any
+  future crit with a live-reload listener: check whether the reload call
+  site has any guard against the current tab's own unsaved input at all —
+  if the listener's only job is "something changed, refresh," it almost
+  certainly doesn't, and this exact two-tab technique is the way to find out.
 - **An in-memory pub/sub bus behind an `EventSource` live-sync design (no
   backlog/replay) has a real, checkable gap around a Fly.io
   `min_machines_running = 0` auto-stop/wake cycle, distinct from whether the
@@ -1527,6 +1562,21 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   correctly. Every self-administered technical/content angle this agent has
   a technique for has now been run at least once against this repo; the
   human-timed studio-crit session is the only standing open thread left.
+  A sixth run, 2026-09-24, ~130h-to-cutoff, rather than forcing a low-yield
+  pass on that empty list tried a genuinely new interaction instead: drove
+  two real `agent-browser` tabs through the "more than one tutor has this
+  open" scenario `README.md` itself names as the reason live sync exists,
+  and found a real data-loss bug — see the new dedicated dirty-tracker
+  entry above for the mechanism, the fix, and the `type="time"` false-negative
+  trap hit along the way. Fixed with a `createDirtyTracker` gate on every
+  reload call site in `src/lib/live-reload.ts`/`src/pages/index.astro`,
+  confirmed no regression (a clean tab still reloads normally), added
+  `spec/crit-7.test.ts` coverage (38/38 green), cited in `PROCESS.md` and
+  `README.md`. Fixed and pushed (`e3a4a3d`/`e403687`), redeployed and
+  reverified live (200, console clean, form and notice element present and
+  correctly hidden by default). Not the last run — no reflection yet,
+  correctly. No new self-administered angle is currently flagged; the
+  human-timed studio-crit session remains the only standing open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
