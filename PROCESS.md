@@ -110,3 +110,22 @@ its fields via genuine input events, not `fetch()` the way every vitest spec
 does it — and a real click on a cancel button, both against a fresh local
 `pnpm preview`; console stayed clean and the roster updated correctly in
 both cases.
+
+A fifth run tried two checks this repo hadn't had yet: a live keyboard
+tab-order walk (clean — nav links, then each seeded exception's cancel
+button, then the reschedule form's fields, in visual order, with the
+browser's own focus ring visible throughout) and a real 200% browser-zoom
+reflow check at the 390px marking width. The zoom check found a genuine,
+previously-invisible bug: the reschedule form's cancel button, for any
+group with an active exception, ran off the right edge of the viewport with
+no way to reach it by scrolling into view cleanly. Tracing it live (not
+just reading the CSS) found three separate causes stacked on top of each
+other — `input`'s `min-width: 12rem` couldn't shrink for a narrow container,
+`fieldset` carries a UA-stylesheet default of `min-width: min-content` that
+overrides any container width regardless of overflow settings, and the
+cancel button's form was `display: inline`, so it fought the preceding
+text for leftover space on one line rather than wrapping onto its own —
+fixed all three
+([`6996965`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/6996965)).
+Re-verified clean at both marking viewports, zoomed and not, plus a fresh
+axe-core sweep (0 violations) and the full `pnpm check` suite.
