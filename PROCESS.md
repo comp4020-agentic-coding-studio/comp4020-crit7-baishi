@@ -205,3 +205,27 @@ Re-verified the same two-tab scenario live — clearing the draft now
 genuinely navigates (the marker is gone, not just unchanged) and the
 roster shows the other tab's change — plus a fresh axe-core sweep (0
 violations) and `pnpm check` green (41/41 tests).
+
+A tenth run checked the ninth run's own flagged question first —
+whether `createReconnectGate`'s plain boolean flip has a comparable
+resolved-vs-merely-possible gap to the one just fixed in the dirty
+tracker — and confirmed it doesn't: the gate has no notice-then-defer
+step to leave unresolved, it only ever answers "should this particular
+`open` event reload," and that answer always funnels straight into
+`reloadUnlessDirty`, which already owns the deferred-reload bookkeeping.
+No code change. Re-fetching the course website's own `api/crit-groups.json`
+found the seeded groups, weeks, and both week-9 exceptions still match
+verbatim — no drift. `pnpm audit` still clean except the one
+correctly-left `esbuild` advisory; `pnpm outdated` had one in-range patch
+(`astro` 7.3.4 → 7.3.5), applied
+([`a9e6bef`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/a9e6bef)).
+The one real gap found: `sessionDate` — the function CLAUDE.md's own
+"derive, don't duplicate" rule names, computing every roster row's real
+calendar date from a week's Monday rather than storing it — had never
+been asserted directly, only eyeballed against the calendar in a
+screenshot. Added three cases including a real seeded week (8) whose
+Friday session crosses a month boundary
+([`e022569`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/e022569)).
+`pnpm check` green (44/44 tests) throughout, a fresh live-browser check
+against a rebuilt server showed the roster still rendering correctly
+with a clean console.
