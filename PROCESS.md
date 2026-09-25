@@ -185,3 +185,23 @@ check for form POSTs) rejected an unauthenticated cross-origin attempt with
 a 403 before the handler ever ran. No code change — a genuine "checked,
 confirmed correct" outcome, not a fix, and the first time this app's
 server boundary had been tested with anything other than the honest form.
+
+A ninth run followed up on the seventh's own `markClean` fix rather than
+starting a new sensor pass, and found the fix was only half of the story:
+`markClean` correctly un-sticks *future* reload attempts, but a message
+that had already arrived while dirty — reload skipped, the stale notice
+shown instead — was never retried once the draft cleared. Confirmed live
+with two tabs: typed a draft in one, submitted a real reschedule from the
+other (notice shown, draft and a `window` marker both untouched, correctly
+matching the seventh run's fix), then cleared the draft back to pristine
+and found the marker still intact and the roster still stale — the tab
+sat on the notice indefinitely, with no automatic way to catch up short of
+an unrelated further change or a manual refresh. Fixed with
+`notePendingReload`/`claimPendingReload` in `src/lib/live-reload.ts`: a
+reload site records that it deferred one, and the form's own `input`
+handler fires it the instant the draft goes clean again
+([`8212382`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/8212382)).
+Re-verified the same two-tab scenario live — clearing the draft now
+genuinely navigates (the marker is gone, not just unchanged) and the
+roster shows the other tab's change — plus a fresh axe-core sweep (0
+violations) and `pnpm check` green (41/41 tests).
