@@ -1,69 +1,66 @@
 # now
 
-## comp4020-crit7-baishi — eighth run, 2026-09-25, ~112h-to-cutoff
+## comp4020-crit7-baishi — ninth run, 2026-09-25, ~106h-to-cutoff
 
-The prior run's `now.md` said no new self-administered angle was flagged
-and the sensor/technique battery was exhausted. Re-fetched the brief (no
-drift), confirmed `pnpm check` green (39/39) and `pnpm audit`/`outdated`
-unchanged (same one correctly-left esbuild-via-drizzle-kit dev-server
-advisory, same major-only outdated set), then found one genuinely untried
-angle by re-reading `src/pages/api/exceptions.ts` and `src/lib/db.ts`
-fresh: every prior check had driven the write path through the honest
-`<select>`/`<input>`-populated HTML form, never a raw direct POST that
-could send a missing or non-numeric `critGroupId`/`week` — exactly the
-class of input `CLAUDE.md`'s own "validate server-side, in the data layer"
-rule is supposed to cover.
+Not the last run. Deepened rather than finished: followed up on the eighth
+run's still-open thread (nothing new self-administered was flagged) by
+re-examining the seventh run's own `markClean` fix instead of reaching for a
+fresh sensor, and found it was only half-complete.
 
-**What changed (1 commit, pushed to `origin/main`, HEAD `fd1332e`; no app
-code touched, so no redeploy needed — live URL reconfirmed 200 as-is):**
+**What I found:** `markClean` correctly un-sticks *future* reload attempts
+once a dirty draft is undone, but a change that had already arrived *while*
+dirty (reload skipped, stale notice shown instead) was never retried once
+the draft cleared — the tab sat on the stale notice indefinitely, with no
+automatic recovery short of an unrelated further change or a manual
+refresh. Confirmed live with two `agent-browser` tabs and the
+`window.__marker` technique already established in this repo's memory:
+marked one tab dirty, triggered a real reschedule from the other (notice
+shown, marker correctly untouched), then cleared the draft back to
+pristine and found the marker *still* untouched — proving no reload had
+fired even though the tab was now clean.
 
-- `fd1332e` — cited this run's finding in `PROCESS.md` (8th moment). No
-  code fix — the check came back clean.
+**Fix:** added `notePendingReload`/`claimPendingReload` to
+`createDirtyTracker()` in `src/lib/live-reload.ts`. A reload site
+(`reloadUnlessDirty` in `index.astro`) calls `notePendingReload` whenever
+it skips a reload because of `isDirty`; the form's own `input` handler
+calls `claimPendingReload` right after `markClean` and fires the deferred
+reload immediately if one was pending. Commit `8212382`.
 
-**Verification, this run:**
+**Verified:** re-ran the same two-tab scenario post-fix — clearing the
+draft now genuinely navigates (marker gone, roster shows the other tab's
+change). Added `spec/crit-7.test.ts` coverage per this repo's own
+`CLAUDE.md` rule (39 → 41 tests, green). Fresh axe-core sweep: 0
+violations. `pnpm check` green throughout. Cited in `PROCESS.md` as the
+9th moment (`5476344`). Pushed both commits to `origin/main`, redeployed
+via `flyctl deploy --remote-only --ha=false -a comp4020-crit7-baishi`
+(succeeded), reconfirmed the live URL
+(`https://comp4020-crit7-baishi.fly.dev/`) returns 200, console clean,
+correct real seed data.
 
-- Built the server (`astro build`), ran it locally on a free port
-  (`node dist/server/entry.mjs`, `DATABASE_PATH` pointed at a scratch
-  `.data/test.db`, cleaned up after), and `curl`'d `POST /api/exceptions`
-  directly with a missing `critGroupId`, a non-numeric `critGroupId`, a
-  non-numeric `week`, and an out-of-range `critGroupId`, plus
-  `POST /api/exceptions/<bad-id>/cancel`. Every case resolved to a graceful
-  `ValidationError` redirect (`?error=unknown crit group` /
-  `?error=not a teaching week this semester`) or a silent no-op for the
-  cancel route — no unhandled exception, no 500.
-- Along the way, confirmed Astro's own `security.allowedDomains` same-origin
-  check (`astro.config.ts`) actively blocks an unauthenticated cross-origin
-  POST with a 403 before the handler runs at all — a real CSRF protection
-  already deliberately configured for the Fly domain, not something this
-  check added.
-- **Tooling trap hit and worked around:** the first attempt used port 4399,
-  which turned out to already be bound by an unrelated app (`aps-ai-tracker`)
-  from a different concurrent sandboxed session — this container is shared,
-  same class of cross-session leakage `MEMORY.md` already logs for
-  `agent-browser console` output, but this is the first time it showed up as
-  a *port* collision serving a foreign app's real content rather than just a
-  stray console line. My own `node` process had silently failed to bind and
-  exited; `ss -ltnp | grep <port>` (not `pgrep`, which matches its own
-  invocation string per the existing `MEMORY.md` entry) revealed the real
-  owner. Picked a genuinely free port instead and it worked cleanly. Worth
-  adding to `MEMORY.md` if this recurs — one instance isn't yet worth a
-  standing entry on its own.
+Also updated `memory/MEMORY.md`: added a durable lesson (a bidirectional
+gate fix only permits the *next* attempt through it — it doesn't
+retroactively resolve an attempt already deferred/failed; check both
+separately) and folded both the eighth run's (untouched until now) and
+this ninth run's summaries into the `comp4020-crit7-baishi` open-threads
+narrative.
 
-Also closed the one follow-up candidate this run had flagged for itself:
-`curl`'d `GET /?error=<script>alert(1)</script>` directly and confirmed the
-echoed HTML in the response is properly entity-escaped
-(`&lt;script&gt;...&lt;/script&gt;`) — Astro's JSX auto-escaping of
-`{error}` holds, no reflected-XSS gap. "Checked, confirmed correct," no
-code change, not written up as its own `PROCESS.md` moment (folded under
-the same server-boundary theme as the direct-POST check above).
+## Single most important next action
 
-**Next run's candidates:**
-
-- No new self-administered technique is currently flagged — both this
-  run's own leads (direct-POST data-layer boundary, reflected-error
-  escaping) came back clean.
-- The human-timed studio-crit session remains the only *structural* open
-  thread.
-
-Not the last run — no reflection expected yet. `git status` clean, all
-commits pushed. Live app confirmed 200.
+No new self-administered technique is currently flagged for this repo —
+nine runs deep, the technical/content sensor battery (audit, outdated,
+html-validate, Lighthouse, axe-core, keyboard tab-order, 200%-zoom
+reflow, live two-tab dirty-tracker/reconnect-gap checks, direct-POST
+server-boundary checks, brief-clause re-derivation against both the
+course source and this repo's own `CLAUDE.md`) has all been run at least
+once, several found and fixed real bugs, and the last two runs in a row
+came back clean or closed a genuinely-deep one-off gap rather than
+surfacing a new class of finding. The human-timed studio-crit session
+remains the only standing structural open thread — nothing left for a
+future self-administered run to chase without inventing busywork. If a
+future run does pick this back up, the one thing genuinely worth a fresh
+look (flagged but not yet tried) is whether `createReconnectGate`'s
+simple boolean-flip design has any comparable "resolved vs. merely
+possible" gap the dirty-tracker just had — on inspection this looks
+unlikely (the gate has no notice-then-defer step to leave unresolved,
+just "should I reload on this open event, yes/no"), but it hasn't been
+explicitly checked the way the dirty tracker just was.

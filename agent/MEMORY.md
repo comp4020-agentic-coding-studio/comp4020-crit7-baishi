@@ -266,6 +266,31 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   guard): check whether undoing the thing that made it dirty is possible,
   and whether the gate actually notices when it happens, not just whether
   the gate fires in the first place.
+- **Making a one-way gate bidirectional (the `markClean` fix just above) only
+  fixes *future* attempts through it — it doesn't retroactively resolve an
+  attempt that already failed and left a visible trace behind.** On
+  `comp4020-crit7-baishi`, `markClean` correctly let a *later* reload attempt
+  succeed once the draft was undone, but a reload that had *already* arrived
+  while dirty (skipped, with the stale-notice banner shown instead) was never
+  retried — the tab sat on that notice indefinitely once the draft cleared,
+  waiting for some unrelated further change to arrive, or a manual refresh,
+  neither of which the fix's own two-tab test had checked for. Confirmed live
+  with the same `window.__marker` technique used elsewhere in this file: mark
+  dirty, trigger a real change from another tab (notice shown, marker
+  untouched — correct), then clear the draft and check the marker again — it
+  was still untouched, proving no reload had fired even though the tab was
+  now clean. Fixed by having the gate track *both* directions explicitly: a
+  `notePendingReload`/`claimPendingReload` pair, where the reload site records
+  that it deferred one and the clean-transition handler claims and fires it
+  immediately rather than waiting for a fresh trigger. General lesson for any
+  future "gate skips an action and shows a placeholder instead, gate reopens
+  later" pattern (a dirty-tracker-gated reload, a disabled-button-until-valid
+  form, a "retry when back online" banner): after fixing the gate to reopen
+  correctly, check specifically whether reopening it *resolves the deferred
+  action*, or merely *permits the next attempt* — these are different claims,
+  and a test that only re-tries the trigger (a second live change) instead of
+  checking what happens right when the gate reopens on its own can pass while
+  this exact gap still exists.
 - **An in-memory pub/sub bus behind an `EventSource` live-sync design (no
   backlog/replay) has a real, checkable gap around a Fly.io
   `min_machines_running = 0` auto-stop/wake cycle, distinct from whether the
@@ -1617,6 +1642,39 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   Not the last run — no reflection yet, correctly. No new self-administered
   angle is currently flagged; the human-timed studio-crit session remains
   the only standing open thread.
+  An eighth run, 2026-09-25, ~112h-to-cutoff, re-read `src/pages/api/
+  exceptions.ts`/`src/lib/db.ts` fresh and tried an angle none of the prior
+  seven had: hitting `POST /api/exceptions` and the cancel route directly
+  with `curl`, bypassing the honest select/option-populated form entirely, to
+  check `CLAUDE.md`'s "validate server-side, in the data layer" rule at a
+  boundary the form itself can never exercise (missing/non-numeric fields,
+  out-of-range ids). Came back clean — every case resolved to a graceful
+  `ValidationError` redirect, and Astro's own `security.allowedDomains`
+  same-origin check rejected an unauthenticated cross-origin POST with a 403
+  before the handler ran. Also confirmed the echoed `?error=` query param is
+  properly entity-escaped (no reflected-XSS gap). No code change, cited as
+  the 8th `PROCESS.md` moment (`fd1332e`). Not the last run.
+  A ninth run, 2026-09-25, ~106h-to-cutoff, followed up on the seventh's own
+  `markClean` fix rather than starting a new sensor pass, and found the fix
+  was only half-complete — see the new dedicated `MEMORY.md` entry above
+  (the "gate reopening only permits the *next* attempt, doesn't resolve the
+  one already deferred" lesson) for the mechanism. Confirmed live with two
+  tabs: a message that arrived while dirty (notice shown, draft and a
+  `window.__marker` both correctly untouched) was never retried once the
+  draft was cleared back to pristine — the marker stayed put, proving no
+  reload fired. Fixed with `notePendingReload`/`claimPendingReload` in
+  `src/lib/live-reload.ts`, wired into `index.astro`'s `input` handler right
+  after `markClean`
+  ([`8212382`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/8212382)),
+  `spec/crit-7.test.ts` coverage added (39 → 41 tests, green), `PROCESS.md`
+  now at 9 cited moments
+  ([`5476344`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/5476344)).
+  Re-verified the same two-tab scenario live post-fix (clearing the draft now
+  genuinely navigates — marker gone, roster shows the other tab's change),
+  fresh axe-core sweep 0 violations, redeployed and reverified live (200,
+  console clean, correct seed data). Not the last run — no reflection yet,
+  correctly. No new self-administered angle is currently flagged; the
+  human-timed studio-crit session remains the only standing open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
