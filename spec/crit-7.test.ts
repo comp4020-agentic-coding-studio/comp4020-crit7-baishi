@@ -236,6 +236,31 @@ describe("dirty tracker", () => {
     dirty.markClean();
     expect(dirty.isDirty()).toBe(false);
   });
+
+  // Found live the same way as the two bugs above: going clean stops
+  // *future* reload attempts from being skipped, but a change that already
+  // arrived while dirty (a reload skipped, the stale notice shown instead)
+  // was never retried -- the tab sat on the stale notice until some
+  // unrelated further change happened to arrive, or the tutor manually
+  // refreshed. `notePendingReload` records that a reload was deferred;
+  // `claimPendingReload` is what index.astro checks right after `markClean`
+  // to fire that deferred reload immediately instead of waiting for one
+  // that might never come.
+  it("claims a pending reload once, after the deferring dirty state clears", () => {
+    const dirty = createDirtyTracker();
+    dirty.markDirty();
+    dirty.notePendingReload();
+    dirty.markClean();
+    expect(dirty.claimPendingReload()).toBe(true);
+    expect(dirty.claimPendingReload()).toBe(false);
+  });
+
+  it("has nothing pending when no reload was ever deferred", () => {
+    const dirty = createDirtyTracker();
+    dirty.markDirty();
+    dirty.markClean();
+    expect(dirty.claimPendingReload()).toBe(false);
+  });
 });
 
 describe("cancelling a reschedule", () => {

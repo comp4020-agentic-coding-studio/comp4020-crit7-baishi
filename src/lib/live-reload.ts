@@ -26,8 +26,26 @@ export function createReconnectGate(): () => boolean {
 // broken for the rest of its life over a draft that no longer exists.
 // index.astro calls markClean whenever the form's current values match its
 // snapshot at page load.
-export function createDirtyTracker(): { markDirty: () => void; markClean: () => void; isDirty: () => boolean } {
+//
+// Going clean isn't enough on its own, though: if a change already arrived
+// while dirty (a reload was skipped and the stale notice shown instead),
+// clearing the draft afterwards has nothing left to lose either, but
+// nothing re-checks that missed reload -- the tab would sit on the stale
+// notice until some unrelated further change happened to arrive, or the
+// tutor manually refreshed. `notePendingReload`/`claimPendingReload` close
+// that gap: a reload site calls `notePendingReload` whenever it skips a
+// reload because of `isDirty`, and index.astro's `input` handler calls
+// `claimPendingReload` right after `markClean` to fire the deferred reload
+// immediately, instead of waiting for a fresh trigger that might never come.
+export function createDirtyTracker(): {
+  markDirty: () => void;
+  markClean: () => void;
+  isDirty: () => boolean;
+  notePendingReload: () => void;
+  claimPendingReload: () => boolean;
+} {
   let dirty = false;
+  let pendingReload = false;
   return {
     markDirty: () => {
       dirty = true;
@@ -36,5 +54,13 @@ export function createDirtyTracker(): { markDirty: () => void; markClean: () => 
       dirty = false;
     },
     isDirty: () => dirty,
+    notePendingReload: () => {
+      pendingReload = true;
+    },
+    claimPendingReload: () => {
+      const had = pendingReload;
+      pendingReload = false;
+      return had;
+    },
   };
 }

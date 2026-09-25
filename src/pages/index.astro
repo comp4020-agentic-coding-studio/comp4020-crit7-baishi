@@ -138,7 +138,9 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       // load and marks clean again when they match — otherwise a tutor who
       // touched the form and backed out would have this tab's live sync
       // stay broken for the rest of its life over a draft that no longer
-      // exists.
+      // exists. Going clean also has to resolve any reload that was already
+      // deferred while dirty — otherwise the stale notice just sits there
+      // until some unrelated further change happens to arrive.
       const dirty = createDirtyTracker();
       const rescheduleForm = document.querySelector<HTMLFormElement>('form[action="/api/exceptions"]');
       const serialize = (form: HTMLFormElement) => new URLSearchParams(new FormData(form) as unknown as string[][]).toString();
@@ -146,6 +148,7 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       rescheduleForm?.addEventListener("input", () => {
         if (serialize(rescheduleForm) === pristineSnapshot) {
           dirty.markClean();
+          if (dirty.claimPendingReload()) location.reload();
         } else {
           dirty.markDirty();
         }
@@ -154,6 +157,7 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
       const staleNotice = document.getElementById("stale-notice");
       const reloadUnlessDirty = () => {
         if (dirty.isDirty()) {
+          dirty.notePendingReload();
           staleNotice?.removeAttribute("hidden");
         } else {
           location.reload();
