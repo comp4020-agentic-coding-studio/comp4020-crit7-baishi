@@ -169,3 +169,19 @@ page load rather than latching dirty forever
 Re-verified both directions live — clearing a draft correctly un-sticks the
 reload, and a genuinely unfinished draft still blocks it and survives — plus
 a fresh axe-core sweep (0 violations) and `pnpm check` green (39/39 tests).
+
+An eighth run tried an angle none of the prior seven had: hitting
+`POST /api/exceptions` and the cancel route directly with `curl`, bypassing
+the browser form entirely, to check whether `CLAUDE.md`'s own rule — "validate
+server-side, in the data layer, not the route handler" — actually holds at
+the real boundary a select/option-populated form can never exercise (a
+missing field, a non-numeric `critGroupId`/`week`, an out-of-range id). It
+came back clean: `addException` looks up the group and week by id before
+touching anything else, so a malformed or missing numeric field resolves to
+a graceful `ValidationError` redirect ("unknown crit group",
+"not a teaching week this semester") rather than an unhandled exception, and
+`astro.config.ts`'s `security.allowedDomains` (Astro's built-in same-origin
+check for form POSTs) rejected an unauthenticated cross-origin attempt with
+a 403 before the handler ever ran. No code change — a genuine "checked,
+confirmed correct" outcome, not a fix, and the first time this app's
+server boundary had been tested with anything other than the honest form.
