@@ -1,66 +1,58 @@
 # now
 
-## comp4020-crit7-baishi — ninth run, 2026-09-25, ~106h-to-cutoff
+## comp4020-crit7-baishi — tenth run, 2026-09-26, ~95h-to-cutoff
 
-Not the last run. Deepened rather than finished: followed up on the eighth
-run's still-open thread (nothing new self-administered was flagged) by
-re-examining the seventh run's own `markClean` fix instead of reaching for a
-fresh sensor, and found it was only half-complete.
+Not the last run. Deepened rather than finished, and kept it small: closed
+the ninth run's own flagged follow-up, then found one genuine small gap.
 
-**What I found:** `markClean` correctly un-sticks *future* reload attempts
-once a dirty draft is undone, but a change that had already arrived *while*
-dirty (reload skipped, stale notice shown instead) was never retried once
-the draft cleared — the tab sat on the stale notice indefinitely, with no
-automatic recovery short of an unrelated further change or a manual
-refresh. Confirmed live with two `agent-browser` tabs and the
-`window.__marker` technique already established in this repo's memory:
-marked one tab dirty, triggered a real reschedule from the other (notice
-shown, marker correctly untouched), then cleared the draft back to
-pristine and found the marker *still* untouched — proving no reload had
-fired even though the tab was now clean.
+**What I checked and closed:** whether `createReconnectGate`'s plain
+boolean-flip design has a comparable "resolved vs. merely possible" gap to
+the one the ninth run fixed in the dirty tracker. Read `live-reload.ts` and
+`index.astro`'s wiring together: the gate only ever answers "should this
+`open` event reload," with no notice-then-defer step of its own — that
+answer funnels straight into `reloadUnlessDirty`, which already owns all the
+deferred-reload bookkeeping. Confirmed clean, no code change.
 
-**Fix:** added `notePendingReload`/`claimPendingReload` to
-`createDirtyTracker()` in `src/lib/live-reload.ts`. A reload site
-(`reloadUnlessDirty` in `index.astro`) calls `notePendingReload` whenever
-it skips a reload because of `isDirty`; the form's own `input` handler
-calls `claimPendingReload` right after `markClean` and fires the deferred
-reload immediately if one was pending. Commit `8212382`.
+**What I found:** `sessionDate` — the pure function `CLAUDE.md`'s own
+"derive, don't duplicate" rule names, computing every roster row's real
+calendar date from a week's Monday rather than storing it — had never been
+asserted directly in `spec/crit-7.test.ts`, only eyeballed against the
+calendar via screenshots across nine prior runs. Added three cases
+(same-day, mid-week offset, and a real seeded week — week 8 — whose Friday
+session genuinely crosses a month boundary), commit `e022569`.
 
-**Verified:** re-ran the same two-tab scenario post-fix — clearing the
-draft now genuinely navigates (marker gone, roster shows the other tab's
-change). Added `spec/crit-7.test.ts` coverage per this repo's own
-`CLAUDE.md` rule (39 → 41 tests, green). Fresh axe-core sweep: 0
-violations. `pnpm check` green throughout. Cited in `PROCESS.md` as the
-9th moment (`5476344`). Pushed both commits to `origin/main`, redeployed
-via `flyctl deploy --remote-only --ha=false -a comp4020-crit7-baishi`
+**Routine drift checks, all clean:** re-fetched the course website's own
+`api/crit-groups.json` — seeded groups, weeks, and both week-9 exceptions
+still match verbatim, no drift. `pnpm audit` still clean except the one
+correctly-left `esbuild` dev-server advisory. `pnpm outdated` had one
+in-range patch (`astro` 7.3.4 → 7.3.5), applied (`a9e6bef`). A fresh
+`html-validate` pass against the live-rendered home and readme pages (fixed
+my own wrong guess at the readme's route — it's `/readme`, not `/about`,
+Astro's 404 page was what `/about` had been validating) came back fully
+clean on both, no findings at all — not even the usual expected doctype/
+void-style non-issues this time, since html-validate didn't flag anything
+in either page's actual markup.
+
+`pnpm check` green (44/44 tests) throughout. Live-browser check against a
+freshly rebuilt server: console clean, roster renders correctly with real
+seed data. `PROCESS.md` now at 10 cited moments, `pnpm check:evidence`
+clean except the expected not-yet-written reflection. All 4 commits pushed
+to `origin/main` (`9f265af`), redeployed via
+`flyctl deploy --remote-only --ha=false -a comp4020-crit7-baishi`
 (succeeded), reconfirmed the live URL
-(`https://comp4020-crit7-baishi.fly.dev/`) returns 200, console clean,
-correct real seed data.
-
-Also updated `memory/MEMORY.md`: added a durable lesson (a bidirectional
-gate fix only permits the *next* attempt through it — it doesn't
-retroactively resolve an attempt already deferred/failed; check both
-separately) and folded both the eighth run's (untouched until now) and
-this ninth run's summaries into the `comp4020-crit7-baishi` open-threads
-narrative.
+(`https://comp4020-crit7-baishi.fly.dev/`) returns 200, console clean.
 
 ## Single most important next action
 
-No new self-administered technique is currently flagged for this repo —
-nine runs deep, the technical/content sensor battery (audit, outdated,
-html-validate, Lighthouse, axe-core, keyboard tab-order, 200%-zoom
-reflow, live two-tab dirty-tracker/reconnect-gap checks, direct-POST
-server-boundary checks, brief-clause re-derivation against both the
-course source and this repo's own `CLAUDE.md`) has all been run at least
-once, several found and fixed real bugs, and the last two runs in a row
-came back clean or closed a genuinely-deep one-off gap rather than
-surfacing a new class of finding. The human-timed studio-crit session
-remains the only standing structural open thread — nothing left for a
-future self-administered run to chase without inventing busywork. If a
-future run does pick this back up, the one thing genuinely worth a fresh
-look (flagged but not yet tried) is whether `createReconnectGate`'s
-simple boolean-flip design has any comparable "resolved vs. merely
-possible" gap the dirty-tracker just had — on inspection this looks
-unlikely (the gate has no notice-then-defer step to leave unresolved,
-just "should I reload on this open event, yes/no"), but it hasn't been
-explicitly checked the way the dirty tracker just was.
+No new self-administered technique is currently flagged — ten runs deep,
+every sensor and re-derivation angle logged in `MEMORY.md`'s
+`comp4020-crit7-baishi` history has been run at least once, several found
+and fixed real bugs, and this run's two closest-remaining follow-up
+questions (the reconnect gate, `sessionDate` coverage) both resolved
+cleanly with only a small test-coverage gap to show for it. The
+human-timed studio-crit session remains the only standing structural open
+thread. If a future run wants a genuinely fresh angle rather than another
+pass of the exhausted battery, the untried one is: re-read `README.md`
+itself clause-by-clause the way `CLAUDE.md` already got in the fourth run
+— it hasn't had that specific treatment yet, only spot-checks (the nav
+mismatch, the "replace not stack" claim).

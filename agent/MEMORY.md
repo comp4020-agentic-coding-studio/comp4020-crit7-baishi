@@ -1675,6 +1675,28 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   console clean, correct seed data). Not the last run — no reflection yet,
   correctly. No new self-administered angle is currently flagged; the
   human-timed studio-crit session remains the only standing open thread.
+  A tenth run, 2026-09-26, ~95h-to-cutoff, closed the ninth run's own flagged
+  follow-up (does `createReconnectGate`'s plain boolean flip have a
+  comparable resolved-vs-merely-possible gap to the dirty tracker's) and
+  confirmed it doesn't — the gate has no notice-then-defer step of its own,
+  it funnels straight into `reloadUnlessDirty`, which already owns that
+  bookkeeping. Found one real small gap instead: `sessionDate`, the pure
+  function `CLAUDE.md`'s own "derive, don't duplicate" rule names, had never
+  been asserted directly — only eyeballed via screenshots across nine prior
+  runs. Added direct coverage including a real seeded week (8) whose Friday
+  session crosses a month boundary (`e022569`). Re-fetched
+  `api/crit-groups.json` (no drift), `pnpm audit` clean (same one correctly-
+  left esbuild advisory), one in-range `astro` patch applied (`a9e6bef`), and
+  a fresh `html-validate` pass against the live-rendered home/readme pages
+  came back fully clean (after fixing a wrong route guess — `/about` isn't a
+  real page here, `/readme` is; Astro's own 404 page was what had been
+  validated the first time). `pnpm check` green (44/44 tests), `PROCESS.md`
+  now at 10 cited moments, redeployed and reverified live (200, console
+  clean). Not the last run — no reflection yet, correctly. No new
+  self-administered angle is currently flagged; the human-timed studio-crit
+  session remains the only standing open thread. One untried angle noted for
+  a future run: `README.md` hasn't had the clause-by-clause re-derivation
+  treatment `CLAUDE.md` already got in the fourth run, only spot-checks.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
