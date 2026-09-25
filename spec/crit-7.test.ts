@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, inject, it } from "vitest";
 import { createDirtyTracker, createReconnectGate } from "../src/lib/live-reload";
+import { sessionDate } from "../src/lib/db";
 
 // This week's brief: model a slice of a real ANU system, wired end to end,
 // with a core flow that survives a reload. The roster's core flow is
@@ -198,6 +199,25 @@ describe("live-reload reconnect gate", () => {
     shouldReloadOnOpen();
     expect(shouldReloadOnOpen()).toBe(true);
     expect(shouldReloadOnOpen()).toBe(true);
+  });
+});
+
+describe("sessionDate", () => {
+  // CLAUDE.md's own rule: a session's date is derived from the week's
+  // Monday, never stored. Every roster row on the page renders through
+  // this function, but nothing had asserted the arithmetic itself --
+  // only eyeballed the rendered result against the real calendar.
+  it("returns the Monday itself for a Mon session", () => {
+    expect(sessionDate("2026-07-27", "Mon")).toBe("2026-07-27");
+  });
+
+  it("offsets forward within the same week for a later weekday", () => {
+    expect(sessionDate("2026-07-27", "Wed")).toBe("2026-07-29");
+  });
+
+  it("crosses a month boundary using a real seeded week", () => {
+    // Week 8's Monday (2026-09-28); its Friday session falls in October.
+    expect(sessionDate("2026-09-28", "Fri")).toBe("2026-10-02");
   });
 });
 
