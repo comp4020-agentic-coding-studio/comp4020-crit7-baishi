@@ -1,65 +1,69 @@
 # now
 
-## comp4020-crit7-baishi — seventh run, 2026-09-25, ~119h-to-cutoff
+## comp4020-crit7-baishi — eighth run, 2026-09-25, ~112h-to-cutoff
 
-The prior run's own `now.md` had flagged exactly one candidate: does the
-dirty-tracker flag itself ever need clearing back to clean, since it's
-currently set-once-per-page-load with no way back. Worked that.
+The prior run's `now.md` said no new self-administered angle was flagged
+and the sensor/technique battery was exhausted. Re-fetched the brief (no
+drift), confirmed `pnpm check` green (39/39) and `pnpm audit`/`outdated`
+unchanged (same one correctly-left esbuild-via-drizzle-kit dev-server
+advisory, same major-only outdated set), then found one genuinely untried
+angle by re-reading `src/pages/api/exceptions.ts` and `src/lib/db.ts`
+fresh: every prior check had driven the write path through the honest
+`<select>`/`<input>`-populated HTML form, never a raw direct POST that
+could send a missing or non-numeric `critGroupId`/`week` — exactly the
+class of input `CLAUDE.md`'s own "validate server-side, in the data layer"
+rule is supposed to cover.
 
-**What changed (2 commits, pushed to `origin/main`, HEAD `41e0e03`, deployed
-and reverified live):**
+**What changed (1 commit, pushed to `origin/main`, HEAD `fd1332e`; no app
+code touched, so no redeploy needed — live URL reconfirmed 200 as-is):**
 
-- `38a7d0d` — found and fixed a real one-way-ratchet bug: a tutor who types
-  a draft into the reschedule form and then clears it back out (abandoning
-  the reschedule, not submitting it) has nothing left to lose, but the
-  dirty flag stayed `true` forever, permanently breaking that tab's live
-  sync for the rest of its life. Confirmed live with two tabs and a
-  `window.__marker` (to prove no reload silently happened): clear a draft
-  back to empty in tab A, submit a genuine reschedule from tab B, watch tab
-  A stay stuck showing the stale notice instead of reloading. Fixed by
-  giving `createDirtyTracker` a `markClean` alongside `markDirty`, and
-  having `index.astro`'s `input` listener re-compare the form's current
-  `FormData` serialization against a snapshot taken at page load on every
-  keystroke rather than latching dirty on the first one. Added
-  `spec/crit-7.test.ts` coverage (38 → 39 tests).
-- `41e0e03` — cited the finding, fix and the reproduction trap in
-  `PROCESS.md` (now 7 moments).
-
-**Testing trap hit twice this run, worth flagging again since it's easy to
-re-hit:** the "second tab" reproduction technique needs the attacker tab's
-own submission to actually be valid HTML5-wise before trusting a "nothing
-happened" result — after any prior submission, that tab's own form resets
-via the 303 redirect, so `startTime`/`endTime` (`type="time"`, see the
-`fill`/`type` limitation logged elsewhere in `MEMORY.md`) go back to blank
-and silently block `requestSubmit()` client-side. Check
-`form.checkValidity()` before trusting a reproduction attempt showed
-nothing — this run's first two attempts at re-testing the fix both looked
-like false confirmations for exactly this reason before the check caught it.
+- `fd1332e` — cited this run's finding in `PROCESS.md` (8th moment). No
+  code fix — the check came back clean.
 
 **Verification, this run:**
 
-- Confirmed both directions live with the marker technique: clearing a
-  draft back to pristine correctly un-sticks the reload (marker gone, real
-  navigation happened); a genuinely unfinished draft still blocks the
-  reload and survives (marker persists, notice shows, draft text intact) —
-  no regression on the original fix.
-- `pnpm check` green (39/39) throughout; fresh axe-core sweep 0 violations;
-  console clean.
-- Deployed (`flyctl deploy --remote-only --ha=false -a
-  comp4020-crit7-baishi`) and reverified live: 200, console clean,
-  `#stale-notice` correctly `hidden` by default.
+- Built the server (`astro build`), ran it locally on a free port
+  (`node dist/server/entry.mjs`, `DATABASE_PATH` pointed at a scratch
+  `.data/test.db`, cleaned up after), and `curl`'d `POST /api/exceptions`
+  directly with a missing `critGroupId`, a non-numeric `critGroupId`, a
+  non-numeric `week`, and an out-of-range `critGroupId`, plus
+  `POST /api/exceptions/<bad-id>/cancel`. Every case resolved to a graceful
+  `ValidationError` redirect (`?error=unknown crit group` /
+  `?error=not a teaching week this semester`) or a silent no-op for the
+  cancel route — no unhandled exception, no 500.
+- Along the way, confirmed Astro's own `security.allowedDomains` same-origin
+  check (`astro.config.ts`) actively blocks an unauthenticated cross-origin
+  POST with a 403 before the handler runs at all — a real CSRF protection
+  already deliberately configured for the Fly domain, not something this
+  check added.
+- **Tooling trap hit and worked around:** the first attempt used port 4399,
+  which turned out to already be bound by an unrelated app (`aps-ai-tracker`)
+  from a different concurrent sandboxed session — this container is shared,
+  same class of cross-session leakage `MEMORY.md` already logs for
+  `agent-browser console` output, but this is the first time it showed up as
+  a *port* collision serving a foreign app's real content rather than just a
+  stray console line. My own `node` process had silently failed to bind and
+  exited; `ss -ltnp | grep <port>` (not `pgrep`, which matches its own
+  invocation string per the existing `MEMORY.md` entry) revealed the real
+  owner. Picked a genuinely free port instead and it worked cleanly. Worth
+  adding to `MEMORY.md` if this recurs — one instance isn't yet worth a
+  standing entry on its own.
+
+Also closed the one follow-up candidate this run had flagged for itself:
+`curl`'d `GET /?error=<script>alert(1)</script>` directly and confirmed the
+echoed HTML in the response is properly entity-escaped
+(`&lt;script&gt;...&lt;/script&gt;`) — Astro's JSX auto-escaping of
+`{error}` holds, no reflected-XSS gap. "Checked, confirmed correct," no
+code change, not written up as its own `PROCESS.md` moment (folded under
+the same server-boundary theme as the direct-POST check above).
 
 **Next run's candidates:**
 
-- No new self-administered angle is currently flagged — every technique
-  this agent has tried elsewhere (sensor battery, brief/CLAUDE.md
-  clause-by-clause re-derivation, CSS-property-literacy, live two-tab
-  scenarios) has now been run on this repo at least once, several more than
-  once. This is the expected steady state for a repo this thoroughly worked
-  (same pattern as crit-4/crit-5's late runs), not a sign something's being
-  missed.
+- No new self-administered technique is currently flagged — both this
+  run's own leads (direct-POST data-layer boundary, reflected-error
+  escaping) came back clean.
 - The human-timed studio-crit session remains the only *structural* open
-  thread — needs the studio itself, not a future run of this agent.
+  thread.
 
 Not the last run — no reflection expected yet. `git status` clean, all
-commits pushed and deployed.
+commits pushed. Live app confirmed 200.
