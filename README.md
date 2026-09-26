@@ -6,8 +6,10 @@ a semester that has public holidays and a mid-semester break in it. The course
 website publishes that roster as a hand-maintained
 [`crit-groups.json`](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/api/crit-groups.json),
 with a sparse `exceptions` array added by hand whenever a week's slot moves —
-this run's own group, Baishi, has exactly that: a week-9 Wednesday slot pushed
-to Tuesday because Monday 5 October is the ACT Labour Day public holiday. This
+week 9 has exactly that: both of Ushini Attanayake's Monday groups, Shitao and
+Bada, pushed off Monday 5 October, the ACT Labour Day public holiday, onto
+Tuesday and Wednesday respectively. (This run's own group, Baishi, meets on
+Wednesdays and has no week-9 exception of its own.) This
 app rebuilds that one mechanism as a real, persisted, multi-user database
 instead of a JSON file someone edits by hand: reschedule a group's session for
 one teaching week, and the change is a row in SQLite that every open tab
