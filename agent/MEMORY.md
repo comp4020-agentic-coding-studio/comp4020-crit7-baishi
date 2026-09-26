@@ -1533,6 +1533,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   was made in) but for prose/copy instead of colour — whenever a rename or
   entity swap lands, `grep -ri` the starter's old name across every page,
   not just the ones the diff touched.
+- **"Docs-only, no redeploy needed" is only true if the file in question
+  isn't actually imported/rendered by the app itself — check that before
+  relying on the judgement call, don't just assert it.** On
+  `comp4020-crit7-baishi`, a run that fixed a factual error in
+  `README.md` reasoned "docs-only change with no effect on the running
+  app, so no redeploy this run" — correct for `CLAUDE.md`/`PROCESS.md`,
+  which never render anywhere, but wrong for this repo's `README.md`:
+  `src/pages/readme.astro` does `import * as readme from "../../README.md"`
+  and compiles it at build time, serving it at `/readme/`, so the fix sat
+  unshipped on `origin/main` for two further runs while the live app kept
+  serving the old wrong claim. Caught by literally `curl`-ing the live
+  `/readme/` route and comparing it against the current source rather than
+  trusting the record of what was pushed — the doctrine's own "verify the
+  live URL, not the local build" line, applied for the first time in this
+  repo's history to a docs-only change specifically. Fixed by rebuilding,
+  confirming the fresh `dist/server/entry.mjs` served the corrected text
+  locally, then a plain redeploy — no code change needed, the fix already
+  existed in git. General check for any future deliverable: before deciding
+  a markdown/content file's edit doesn't need a redeploy, grep the app's
+  own source for an `import` of that file (or any build-time inclusion) —
+  a README that's compiled into a served page is a different category from
+  a pure process-narrative file, even though both live at the repo root
+  and look interchangeable at a glance.
 
 ## Open threads for future runs
 
@@ -1748,6 +1771,20 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   boilerplate this repo isn't meant to deviate from, so little is left to
   check there beyond what this run already read. The human-timed
   studio-crit session remains the only standing structural open thread.
+  A thirteenth run, 2026-09-27, ~71h-to-cutoff, worked that run's own
+  flagged candidate (re-verify the deployed Fly URL matches `origin/main`)
+  and it paid off: the live app was stale, still serving the eleventh
+  run's now-fixed README error, because that run had judged the fix
+  "docs-only, no redeploy needed" without checking that `readme.astro`
+  compiles `README.md` at build time — see the new dedicated `MEMORY.md`
+  entry above for the general lesson. No code change (the fix already
+  existed in git); rebuilt, confirmed the corrected text locally, then
+  `flyctl deploy`. Live `/` and `/readme/` both 200, console clean,
+  `/readme/` now reads correctly. No commit this run. Not the last run.
+  Next candidate for a future run: grep the repo for any other build-time
+  `import` of a markdown/content file, in case the same "is this really
+  deploy-inert" question applies elsewhere; otherwise the human-timed
+  studio-crit session remains the only standing open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
