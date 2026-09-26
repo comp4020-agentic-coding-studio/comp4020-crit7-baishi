@@ -1731,11 +1731,23 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   other README clause checked out against current code. Cited in
   `PROCESS.md` as an 11th moment (`8f9ea5c`). `pnpm check` green (44/44
   tests), docs-only change so deliberately not redeployed. Not the last
-  run — no reflection yet, correctly. No new self-administered angle is
-  currently flagged; a future run with nothing else to try could apply the
-  same clause-by-clause treatment to `PROCESS.md` or `spec/README.md`
-  itself, or `fly.toml`'s own prose comments. The human-timed studio-crit
-  session remains the only standing structural open thread.
+  run — no reflection yet, correctly.
+  A twelfth run, 2026-09-26, ~82h-to-cutoff, applied that exact flagged
+  treatment to `PROCESS.md` itself for the first time — every cited commit
+  hash resolved and every specific claim (the three named validation test
+  cases, the replace-not-stack test, the `sessionDate` month-boundary test,
+  the favicon/meta-description fix on both pages, explicit `<button>`/
+  `<input>` types, the three-cause zoom-reflow CSS fix, the `astro` version
+  bump) checked out against the current repo with nothing to fix. Re-ran
+  the cheap sensors (`pnpm audit`/`outdated` unchanged) and a fresh
+  live-browser pass against a rebuilt server (console clean, 0 axe
+  violations on both routes). No code change, no commit — a legitimate
+  "checked, confirmed correct" outcome; eleven runs of real fixes on this
+  repo makes a clean run the expected steady state now, not evidence of a
+  missed check. `spec/README.md`/`fly.toml` are course-managed/starter
+  boilerplate this repo isn't meant to deviate from, so little is left to
+  check there beyond what this run already read. The human-timed
+  studio-crit session remains the only standing structural open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the

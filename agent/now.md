@@ -1,6 +1,31 @@
 # now
 
-## comp4020-crit7-baishi — eleventh run, 2026-09-26, ~88h-to-cutoff
+## comp4020-crit7-baishi — twelfth run, 2026-09-26, ~82h-to-cutoff
+
+Not the last run. Worked the eleventh run's own flagged candidate (`PROCESS.md`
+clause-by-clause) and, this time, found nothing wrong.
+
+**What I did:** re-read `PROCESS.md`'s eleven-run narrative against the
+current code and git history rather than another sensor pass — every cited
+commit hash resolves, and every specific claim checked against the live
+repo held up: the three validation cases it names (weekend day, backwards
+time range, missing reason) are all present in `spec/crit-7.test.ts`; the
+one-exception-per-week replace-not-stack test and the `sessionDate`
+month-boundary test it describes both exist; the favicon/meta-description
+Lighthouse fix is on both `index.astro` and `readme.astro`; all buttons and
+inputs have explicit `type`s; the three-cause zoom-reflow CSS fix (fieldset
+`min-width: 0`, capped input `min-width`, `li form { display: block }`) is
+all still in `src/styles.css`; `package.json` pins `astro` at the `^7.3.5`
+the tenth run's bump claims. Also re-ran the cheap sensors: `pnpm audit`
+unchanged (same one correctly-left `esbuild` advisory), `pnpm outdated`
+unchanged (five major-only entries), `pnpm check` green (44/44), and a
+fresh `dist/server/entry.mjs` + `agent-browser` pass on both routes
+(console clean, 0 axe violations). No code change, no commit — a
+legitimate "checked, confirmed correct" outcome, not a failure to find
+work: eleven runs of real fixes on this repo means a run that finds
+nothing is the expected steady state, not evidence of a missed check.
+
+## Prior: eleventh run, 2026-09-26, ~88h-to-cutoff
 
 Not the last run. Small, focused deepening: worked the tenth run's own
 flagged untried angle and it paid off immediately.
@@ -34,13 +59,14 @@ this is a deliberate judgement call, not an oversight.
 
 ## Single most important next action
 
-No new self-administered technique is currently flagged. Every angle
-logged in `MEMORY.md`'s `comp4020-crit7-baishi` history — sensors,
-clause-by-clause re-derivation (now applied to `CLAUDE.md` *and*
-`README.md`), two-tab live-sync scenarios, server-boundary curl probes —
-has been run at least once, several found and fixed real bugs. A future
-run with genuinely nothing left to try could re-read `PROCESS.md` itself
-clause-by-clause (the one prose file in this repo that's never had this
-treatment applied to itself) or re-check `spec/README.md`/`fly.toml`'s own
-prose against current behaviour. The human-timed studio-crit session
-remains the only standing structural open thread.
+No new self-administered technique is currently flagged. Every prose file
+in this repo has now had the clause-by-clause treatment at least once
+(`CLAUDE.md`, `README.md`, `PROCESS.md`); `spec/README.md` and `fly.toml`
+are course-managed/starter boilerplate this repo isn't meant to deviate
+from, so there's little left to check in them beyond what this run already
+read. The human-timed studio-crit session remains the only standing
+structural open thread. A future run with nothing else to try could sweep
+`spec/invariants.test.ts`/`spec/guestbook.test.ts` (the shipped starter
+tests) for anything that's quietly stopped covering a route since the app
+grew past the guestbook demo, or just re-verify the deployed Fly URL still
+matches the latest commit.
