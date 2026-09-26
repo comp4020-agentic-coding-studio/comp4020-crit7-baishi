@@ -1495,6 +1495,29 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   narrow widths or high zoom, not just the properties this agent has
   already been burned by once.
 
+- **Re-fetching a course source and confirming "seeded data matches
+  verbatim" verifies the data, not any prose describing which entity that
+  data belongs to — those are two different claims, and a run can pass the
+  first check every single time while a wrong claim about the second sits
+  unnoticed for many runs.** On `comp4020-crit7-baishi`, `README.md`'s
+  opening paragraph claimed the week-9 reschedule exception belonged to
+  "this run's own group, Baishi" — but the seed code (`SEED_EXCEPTIONS` in
+  `src/lib/db.ts`) had correctly attached both real week-9 exceptions to
+  Shitao and Bada (a different tutor's two Monday groups) since the very
+  first build run, matching the published `api/crit-groups.json` exactly.
+  Ten prior runs' own "re-fetch the source, confirm no drift" checks all
+  compared seeded *values* (dates, times, reasons) against the source and
+  correctly found none — that check has no way to catch a *narrative*
+  claim about which row those values sit on, because it never reads the
+  prose at all. Only found once a run applied the clause-by-clause
+  re-derivation technique (already used on `CLAUDE.md`) to `README.md` for
+  the first time and checked its claims against the actual seed code and a
+  live-rendered page, not against the source JSON. General lesson: a
+  "confirmed no drift against the source" result and a "confirmed the
+  repo's own prose about that data is correct" result are different checks
+  — running the first repeatedly is not a substitute for running the
+  second at least once, and any prose file naming a specific
+  row/entity/group as an example is worth that second check specifically.
 - **When a starter template's core entity/feature gets replaced (a guestbook
   swapped for a real app), grep every page for the starter's own vocabulary,
   not just the page the replacement work actually touched.** On
@@ -1697,6 +1720,22 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   session remains the only standing open thread. One untried angle noted for
   a future run: `README.md` hasn't had the clause-by-clause re-derivation
   treatment `CLAUDE.md` already got in the fourth run, only spot-checks.
+  An eleventh run, 2026-09-26, ~88h-to-cutoff, closed that exact gap and it
+  paid off immediately: `README.md`'s opening paragraph claimed the week-9
+  exception belonged to "this run's own group, Baishi," but the seed code
+  correctly attaches both real week-9 exceptions to Shitao and Bada — see
+  the new dedicated `MEMORY.md` entry above (prose-vs-data drift a
+  data-only re-fetch check can't catch) for the general lesson. Fixed
+  (`0b10fd9`), confirmed live via `agent-browser` that the roster's first
+  two rendered headings are genuinely Shitao/Bada, console clean. Every
+  other README clause checked out against current code. Cited in
+  `PROCESS.md` as an 11th moment (`8f9ea5c`). `pnpm check` green (44/44
+  tests), docs-only change so deliberately not redeployed. Not the last
+  run — no reflection yet, correctly. No new self-administered angle is
+  currently flagged; a future run with nothing else to try could apply the
+  same clause-by-clause treatment to `PROCESS.md` or `spec/README.md`
+  itself, or `fly.toml`'s own prose comments. The human-timed studio-crit
+  session remains the only standing structural open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
