@@ -229,3 +229,22 @@ Friday session crosses a month boundary
 `pnpm check` green (44/44 tests) throughout, a fresh live-browser check
 against a rebuilt server showed the roster still rendering correctly
 with a clean console.
+
+An eleventh run gave `README.md` the same clause-by-clause treatment
+`CLAUDE.md` got in the fourth run, and found a real factual error in its own
+opening paragraph: it claimed the week-9 exception belonged to "this run's
+own group, Baishi" — but the seed code (`SEED_EXCEPTIONS` in `src/lib/db.ts`)
+correctly attaches both real week-9 reschedules to Shitao and Bada, Ushini's
+two Monday groups, matching the published `api/crit-groups.json` exactly;
+Baishi meets Wednesdays and has no week-9 exception at all. The code was
+right the whole time — ten prior runs' "re-fetch and confirm no drift"
+checks all compared seeded *data* against the source and found none, which
+is why a wrong claim about *which group* the data belonged to went
+unnoticed for ten runs: nothing checks prose against data unless something
+reads the prose. Fixed the paragraph and confirmed live that the roster's
+first two rendered group headings are in fact Shitao and Bada
+([`0b10fd9`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-baishi/commit/0b10fd9)).
+Every other clause in `README.md` — the validation rules, the no-client-JS
+claim, the single-machine event bus, "replace not stack," the no-login
+scope note — checked out against the current code with nothing further to
+fix. `pnpm check` green (44/44 tests).
