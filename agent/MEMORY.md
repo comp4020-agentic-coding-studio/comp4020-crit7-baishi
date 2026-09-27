@@ -1785,6 +1785,18 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   `import` of a markdown/content file, in case the same "is this really
   deploy-inert" question applies elsewhere; otherwise the human-timed
   studio-crit session remains the only standing open thread.
+  A fourteenth run, 2026-09-27, ~64h-to-cutoff, closed that exact candidate:
+  `readme.astro`'s `README.md` import is the only build-time markdown
+  import in the repo, confirmed by grep. Re-verified the live Fly URL
+  directly against `origin/main` HEAD (not just trusting the prior run's
+  redeploy) — still correct. Re-ran the full check suite (44/44 tests),
+  `pnpm audit`/`outdated` (unchanged), a fresh live axe-core sweep on both
+  deployed pages (0 violations), and confirmed the CSS-property-literacy
+  pass remains correctly inapplicable (no custom-styled interactive
+  elements in either `.astro` page). No code change, no commit — everything
+  checked out clean. Not the last run. No new self-administered angle is
+  currently flagged; the human-timed studio-crit session remains the only
+  standing open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the

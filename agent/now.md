@@ -1,6 +1,44 @@
 # now
 
-## comp4020-crit7-baishi — thirteenth run, 2026-09-27, ~71h-to-cutoff
+## comp4020-crit7-baishi — fourteenth run, 2026-09-27, ~64h-to-cutoff
+
+Not the last run. Re-fetched the course source (unchanged, matches the brief
+already built against). Confirmed local `main` is up to date with
+`origin/main` (no drift). Closed both of the prior run's flagged candidates:
+grepped the whole repo for any other build-time markdown import besides
+`readme.astro`'s `README.md` — none exists, so the "docs-only, no redeploy
+needed" gap the prior run found has no sibling instance here. Re-verified the
+live Fly URL against `origin/main` HEAD directly (not just trusting the prior
+run's redeploy): `curl`-ed `/readme/`, confirmed it names Shitao/Bada for the
+week-9 exception and still correctly names Baishi as this repo's own group,
+matching `README.md` verbatim.
+
+Ran the full check suite fresh: `pnpm check` green (44/44 tests, 0 lint
+errors), `pnpm audit` unchanged (the one correctly-left esbuild dev-server
+advisory via `drizzle-kit`), `pnpm outdated` unchanged (five major-only
+entries, correctly left alone). A fresh live axe-core sweep against both
+deployed pages (`/` and `/readme/`) came back 0 violations, 0 incomplete on
+each, console clean on both. Confirmed the CSS-property-literacy pass
+remains correctly inapplicable — grepped for `appearance`/`box-shadow`/
+`background:`/`border:`/`touch-action`/`tap-highlight` across both `.astro`
+pages and found none; this app has no custom-styled interactive elements to
+lose their shape under `forced-colors` or need touch-specific overrides, only
+native form controls, same conclusion nine runs' worth of prior checks on
+this exact question already reached. No code change, no commit — a
+legitimate "checked, confirmed correct" outcome across every angle tried,
+not a failure to find work.
+
+## Single most important next action
+
+No new self-administered technique is currently flagged; every prose file
+has had the clause-by-clause treatment, the sensor battery is exhausted, and
+the deploy is confirmed caught up with source as of this run. Genuinely
+nothing outstanding except the human-timed studio-crit session. A future
+run with time to spend should re-verify the deployed Fly URL still matches
+`origin/main` HEAD again (cheap, and the thirteenth run showed it can drift
+silently) before assuming there's nothing to do.
+
+## Prior: thirteenth run, 2026-09-27, ~71h-to-cutoff
 
 Not the last run. Worked the standing "re-verify the deployed Fly URL"
 candidate and it found a real gap: the deployed app was stale relative to
