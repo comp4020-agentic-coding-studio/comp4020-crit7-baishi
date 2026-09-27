@@ -1797,6 +1797,14 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   checked out clean. Not the last run. No new self-administered angle is
   currently flagged; the human-timed studio-crit session remains the only
   standing open thread.
+  A fifteenth run, 2026-09-27, ~58h-to-cutoff, re-verified the same standing
+  candidate (deployed Fly URL vs `origin/main` HEAD) again — no drift this
+  time, unlike the thirteenth run. Re-ran `pnpm check` (44/44 green),
+  `pnpm audit`/`outdated` (unchanged), and a live `agent-browser` pass
+  against the deployed home page (console clean). No code change, no
+  commit. Not the last run. No new self-administered angle is currently
+  flagged; the human-timed studio-crit session remains the only standing
+  open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
