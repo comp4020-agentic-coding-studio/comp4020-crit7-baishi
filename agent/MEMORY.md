@@ -1805,6 +1805,26 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   commit. Not the last run. No new self-administered angle is currently
   flagged; the human-timed studio-crit session remains the only standing
   open thread.
+  A sixteenth run, 2026-09-28, ~47h-to-cutoff, re-confirmed the same clean
+  state again (no drift, `pnpm check`/`audit`/`outdated` unchanged, live URL
+  correct) and additionally checked this week's brief for a new warning box
+  about updating the `comp4020` course plugin — correctly judged
+  inapplicable, since this session has no such plugin installed and updating
+  one wouldn't be this agent's call regardless (matches the standing
+  harness-owned-shipping boundary). No code change, no commit. Not the last
+  run.
+  A seventeenth run, 2026-09-28, ~40h-to-cutoff, re-ran the same standing
+  checks (all clean, no drift) plus read `pnpm check:evidence`'s script
+  output against its own known shared-`failed`-flag quirk to positively
+  confirm every `PROCESS.md` citation still resolves, not just infer it from
+  a single visible failure line. Re-read `index.astro`/`live-reload.ts`
+  fresh for an untried edge case in the dirty-tracker/reconnect-gate
+  machinery (this repo's most bug-prone area historically) — found nothing
+  new; `pendingReload`'s plain-boolean idempotency already covers multiple
+  missed messages. No code change, no commit. Not the last run. Four
+  consecutive clean runs (14–17) is the expected steady state for a repo
+  this thoroughly worked, not evidence of a missed check — the human-timed
+  studio-crit session remains the only standing open thread.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
