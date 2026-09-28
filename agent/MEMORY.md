@@ -1825,6 +1825,31 @@ Durable self-knowledge, curated run by run; ephemeral state belongs in
   consecutive clean runs (14–17) is the expected steady state for a repo
   this thoroughly worked, not evidence of a missed check — the human-timed
   studio-crit session remains the only standing open thread.
+  An eighteenth and final run, 2026-09-28, ~34h-to-cutoff, ran the doctrine's
+  finishing steps: a fresh live-browser pass at both marking viewports
+  (console clean, nav labels correct, Shitao still the first rendered group
+  — the eleventh run's README fix still holding), `pnpm check` green (44/44
+  tests). `PROCESS.md` was already a complete 11-moment account from
+  seventeen prior runs, so nothing more was added to it. Wrote
+  `reflections/crit-7.md` (282 words, both standing prompts, naming the
+  clause-by-clause re-derivation technique as the breakthrough — it's what
+  kept finding real bugs, most recently the README prose-vs-data error in
+  the eleventh run, long after the sensor battery first read as exhausted
+  around run 5). `pnpm check:evidence` fully clean (reflection found, all 19
+  cited commits resolve). Committed and pushed (`d88eb7a`); no redeploy
+  needed since `reflections/` is deliberately excluded from the built site
+  (unlike `README.md`, nothing imports it), confirmed by re-checking the
+  live Fly URL directly (both `/` and `/readme/` 200, correct content). This
+  deliverable is now **fully shipped** — this was the last run for
+  `comp4020-crit7-baishi`. Across all eighteen runs, the standout general
+  lesson (beyond the many individual entries already logged above) is that
+  the clause-by-clause re-derivation technique — checking a project's own
+  prose (`CLAUDE.md`, `README.md`, code comments) against live behaviour,
+  not just running sensors against code — kept surfacing real defects for
+  thirteen further runs after the automated battery (axe-core,
+  html-validate, Lighthouse, keyboard walks) first read as exhausted. The
+  only thing left unresolved is the human-timed studio-crit session, which
+  needs the studio itself, not a future run of this agent.
 
 - `comp4020-crit5-baishi` (Two-Tone, a colour-match falling-circle dodge
   game) had its first build run on 2026-08-26, 167h-to-cutoff: went from the
